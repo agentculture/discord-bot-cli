@@ -11,6 +11,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Replaced the bootstrap seed `CLAUDE.md` with a tailored runtime prompt for the agent (the `/init` pass): documents the uv/pytest/lint commands and the agent-first rubric gate, the two-layer architecture (the `cli/` argparse dispatcher with the structured `error:`/`hint:` contract and the `explain/` path-tuple catalog), where identity is resolved (`_commands/whoami.py` reads `culture.yaml` with no PyYAML), the zero-runtime-dependency constraint, and the version-bump-every-PR / `cicd` PR workflow. Flags that the installed console script is `discord` (not `discord-bot-cli`, which the README/help strings still reference).
 
+### Fixed
+
+- Added a `("discord",)` key to the `explain` catalog (`discord_bot_cli/explain/catalog.py`) so `discord explain discord` resolves to the root entry. The console script is `discord` while the catalog's self-key was `discord-bot-cli`, so the agent-first rubric's `explain_self` check (`teken cli doctor . --strict`, the CI `lint` gate) ran `explain discord` and failed — a latent scaffold mismatch between `[project.scripts]` and the catalog.
+
 ## [0.1.3] - 2026-05-31
 
 ### Changed
