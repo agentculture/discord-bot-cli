@@ -15,6 +15,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `outsource` skill (`scripts/outsource.sh`), patched in place over the vendored copy as a logged divergence (upstream [convertible#63](https://github.com/agentculture/convertible/issues/63)): user/parse-time errors now exit `1` (environment errors `2`) per the afi exit contract; every `error:` carries a `hint:`; `render_prompt` replaces `$BASE` before `$ARGUMENTS` so a literal `$BASE` in user text is no longer corrupted; worktree cleanup only deletes a `convertible/*` branch this run created. Refreshed `uv.lock` to 0.1.5; corrected the skill-kit count (11 → 12) and added the `outsource` provenance row in `docs/skill-sources.md`. Addresses Qodo review on PR#2.
+
 ## [0.1.4] - 2026-05-31
 
 ### Changed

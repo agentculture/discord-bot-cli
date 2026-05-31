@@ -8,7 +8,7 @@ Agent + CLI that gives an agent Discord access via a bot.
   (`afi-cli`) — the runtime package has no third-party dependencies.
 - **A mesh identity** — `culture.yaml` (`suffix` + `backend`) and the matching
   prompt file (`CLAUDE.md` for `backend: claude`).
-- **The canonical guildmaster skill kit** (11 skills) under `.claude/skills/`,
+- **The canonical guildmaster skill kit** (12 skills) under `.claude/skills/`,
   vendored cite-don't-import. See [`docs/skill-sources.md`](docs/skill-sources.md).
 - **A build + deploy baseline** — pytest, lint, the agent-first rubric gate, and
   PyPI Trusted Publishing wired into GitHub Actions.

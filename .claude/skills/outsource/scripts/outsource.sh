@@ -19,6 +19,19 @@ set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROMPTS_DIR="$SKILL_DIR/prompts"
 
+# ── structured error exit ───────────────────────────────────────────────────
+# Exit contract (afi-cli): 0 ok · 1 user error · 2 environment error · 3+ reserved.
+# Usage: die <code> "<error message>" ["<hint>" ...]  — every error carries a hint.
+die() {
+    local code="$1"; shift
+    printf 'error: %s\n' "$1" >&2; shift
+    local hint
+    for hint in "$@"; do
+        printf 'hint: %s\n' "$hint" >&2
+    done
+    exit "$code"
+}
+
 # ── resolve the convertible CLI (installed, then local-dev fallback) ─────────
 CONVERTIBLE=()
 resolve_convertible() {
@@ -78,12 +91,8 @@ VERB="${1:-}"
 case "$VERB" in
     explore | review | write) shift ;;
     -h | --help) usage; exit 0 ;;
-    "") usage >&2; exit 2 ;;
-    *)
-        echo "error: unknown verb '$VERB' (expected explore|review|write)" >&2
-        echo "hint: run 'outsource --help'" >&2
-        exit 2
-        ;;
+    "") usage >&2; die 1 "no verb given" "run 'outsource explore|review|write' — see 'outsource --help'" ;;
+    *) die 1 "unknown verb '$VERB' (expected explore|review|write)" "run 'outsource --help'" ;;
 esac
 
 # Required external tools — fail fast with a clear message, not an opaque
@@ -94,20 +103,15 @@ require_tools() {
         command -v "$t" >/dev/null 2>&1 || missing+=("$t")
     done
     if [[ ${#missing[@]} -gt 0 ]]; then
-        echo "error: missing required tool(s): ${missing[*]}" >&2
-        echo "hint: outsource needs python3, git, grep, and mktemp on PATH." >&2
-        exit 2
+        die 2 "missing required tool(s): ${missing[*]}" \
+            "outsource needs python3, git, grep, and mktemp on PATH."
     fi
 }
 
 # Guard a value-taking flag: a trailing flag with no value would otherwise
 # dereference an unset $2 and abort under `set -u`.
 need_value() {  # $1 = remaining arg count ($#), $2 = flag name
-    [[ "$1" -ge 2 ]] || {
-        echo "error: $2 requires a value" >&2
-        echo "hint: run 'outsource --help'" >&2
-        exit 2
-    }
+    [[ "$1" -ge 2 ]] || die 1 "$2 requires a value" "run 'outsource --help'"
 }
 
 require_tools
@@ -137,13 +141,15 @@ while [[ $# -gt 0 ]]; do
         --pr) OPEN_PR=1; shift ;;
         -h | --help) usage; exit 0 ;;
         --) shift; while [[ $# -gt 0 ]]; do ARG="${ARG:+$ARG }$1"; shift; done ;;
-        -*) echo "error: unknown option '$1'" >&2; echo "hint: run 'outsource --help'" >&2; exit 2 ;;
+        -*) die 1 "unknown option '$1'" "run 'outsource --help'" ;;
         *) ARG="${ARG:+$ARG }$1"; shift ;;
     esac
 done
 
-[[ -n "$ARG" ]] || { echo "error: $VERB needs a description argument" >&2; usage >&2; exit 2; }
-[[ -d "$REPO" ]] || { echo "error: --repo is not a directory: $REPO" >&2; exit 2; }
+[[ -n "$ARG" ]] || die 1 "$VERB needs a description argument" \
+    "e.g. outsource $VERB \"<text>\" — run 'outsource --help'"
+[[ -d "$REPO" ]] || die 1 "--repo is not a directory: $REPO" \
+    "pass --repo PATH pointing at an existing repo (default: .)"
 REPO="$(cd "$REPO" && pwd)"
 
 resolve_convertible || exit 2
@@ -156,11 +162,14 @@ COMMON_FLAGS=(--engine "$ENGINE" --model "$MODEL" --base-url "$BASE_URL" --max-s
 # ── render an instruction from a prompt template ────────────────────────────
 render_prompt() {
     local file="$PROMPTS_DIR/$1.md"
-    [[ -f "$file" ]] || { echo "error: missing prompt template: $file" >&2; exit 2; }
+    [[ -f "$file" ]] || die 2 "missing prompt template: $file" \
+        "re-sync the outsource skill — templates are expected under $PROMPTS_DIR"
+    # Replace $BASE first, then $ARGUMENTS: user text injected for $ARGUMENTS must
+    # never be post-processed, or a literal "$BASE" inside it would be corrupted.
     ARG="$ARG" BASE="$BASE" python3 - "$file" <<'PY'
 import os, sys
 tpl = open(sys.argv[1], encoding="utf-8").read()
-sys.stdout.write(tpl.replace("$ARGUMENTS", os.environ["ARG"]).replace("$BASE", os.environ["BASE"]))
+sys.stdout.write(tpl.replace("$BASE", os.environ["BASE"]).replace("$ARGUMENTS", os.environ["ARG"]))
 PY
 }
 
@@ -176,12 +185,14 @@ import sys, json
 raw = sys.stdin.read().strip()
 if not raw:
     sys.stderr.write("error: convertible produced no result on stdout (see diagnostics above)\n")
+    sys.stderr.write("hint: check the engine/--base-url is reachable, then retry\n")
     sys.exit(2)
 try:
     d = json.loads(raw)
 except Exception:
     sys.stderr.write("error: could not parse convertible --json output:\n")
     sys.stderr.write(raw[:2000] + "\n")
+    sys.stderr.write("hint: the engine returned non-JSON — verify --base-url and retry\n")
     sys.exit(2)
 print("status:", d.get("status"))
 print()
@@ -202,15 +213,18 @@ sys.exit(0 if d.get("status") == "ok" else 1)
 # *after* run_readonly returns, so under `set -u` a local would be unbound.
 _WT=""
 _DRIVE_BRANCH=""
+_PRE_BRANCHES=""
 
 _cleanup_worktree() {
     [[ -n "$_WT" ]] || return 0
     git -C "$REPO" worktree remove --force "$_WT" >/dev/null 2>&1 || true
     rm -rf "$_WT" >/dev/null 2>&1 || true
     # Only ever delete the ephemeral drive branch convertible names
-    # (convertible/<task_id>) — never an unrelated local branch, even if the
-    # JSON `branch` value were unexpected.
-    if [[ "$_DRIVE_BRANCH" == convertible/* ]]; then
+    # (convertible/<task_id>) — and only if *this* run created it, never a
+    # pre-existing or unrelated local branch, even if the JSON `branch` value
+    # were unexpected.
+    if [[ "$_DRIVE_BRANCH" == convertible/* ]] \
+        && ! printf '%s\n' "$_PRE_BRANCHES" | grep -qxF "$_DRIVE_BRANCH"; then
         git -C "$REPO" branch -D "$_DRIVE_BRANCH" >/dev/null 2>&1 || true
     fi
 }
@@ -218,7 +232,13 @@ _cleanup_worktree() {
 run_readonly() {
     local instruction="$1"
     git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
-        || { echo "error: --repo is not a git repository: $REPO" >&2; exit 2; }
+        || die 1 "--repo is not a git repository: $REPO" \
+            "explore/review need a git repo — run from one or pass --repo PATH"
+
+    # Snapshot pre-existing convertible/* branches so cleanup only ever deletes a
+    # drive branch *this* run created, never a like-named branch that predates it.
+    _PRE_BRANCHES="$(git -C "$REPO" for-each-ref --format='%(refname:short)' \
+        refs/heads/convertible/ 2>/dev/null || true)"
 
     _WT="$(mktemp -d)"
     trap _cleanup_worktree EXIT
@@ -239,9 +259,8 @@ run_write() {
     local instruction="$1"
     if [[ "$ALLOW_DIRTY" -eq 0 ]] \
         && [[ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]]; then
-        echo "error: working tree is dirty — commit/stash first, or pass --allow-dirty" >&2
-        echo "hint: 'convertible drive --no-pr' commits uncommitted edits onto the drive branch" >&2
-        exit 2
+        die 1 "working tree is dirty — commit/stash first, or pass --allow-dirty" \
+            "'convertible drive --no-pr' commits uncommitted edits onto the drive branch"
     fi
     local out
     if [[ "$OPEN_PR" -eq 1 ]]; then
