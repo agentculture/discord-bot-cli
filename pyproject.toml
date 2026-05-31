@@ -1,6 +1,6 @@
 [project]
 name = "discord-bot-cli"
-version = "0.1.3"
+version = "0.1.4"
 description = "Agent + CLI that gives an agent Discord access via a bot."
 readme = "README.md"
 license = "MIT"
@@ -21,6 +21,7 @@ Issues = "https://github.com/agentculture/discord-bot-cli/issues"
 
 [project.scripts]
 discord = "discord_bot_cli.cli:main"
+discord-bot-cli = "discord_bot_cli.cli:main"
 
 [build-system]
 requires = ["hatchling"]
