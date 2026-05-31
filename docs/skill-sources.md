@@ -11,6 +11,11 @@ Three skills (`think`, `spec-to-plan`, `assign-to-workforce`) originate in
 only **re-broadcasts** them. Cite guildmaster's copy; track devague as the true
 origin.
 
+The `outsource` skill originates in
+[`agentculture/convertible`](https://github.com/agentculture/convertible);
+guildmaster only **re-broadcasts** it (the same inbound pattern). Cite
+guildmaster's copy; track convertible as the true origin.
+
 Every vendored `SKILL.md` carries `type: command`. discord-bot-cli
 declares a culture agent (`culture.yaml`, `backend: claude`), and
 `core.skill_loader` silently skips any `SKILL.md` lacking `type:` — so the field
@@ -29,6 +34,7 @@ is load-bearing, even where guildmaster's upstream copy omits it.
 | `think` | `../guildmaster/.claude/skills/think/` | **devague** (re-broadcast via guildmaster) | idea→spec leg of the devague workflow chain. Verbatim (already carried `type: command` at guildmaster). Origin/broadcast prose left verbatim. | 2026-05-26 (guildmaster 0.6.0) |
 | `spec-to-plan` | `../guildmaster/.claude/skills/spec-to-plan/` | **devague** (re-broadcast via guildmaster) | spec→plan leg of the devague workflow chain. Verbatim (already carried `type: command`). | 2026-05-26 (guildmaster 0.6.0) |
 | `assign-to-workforce` | `../guildmaster/.claude/skills/assign-to-workforce/` | **devague** (re-broadcast via guildmaster) | plan→parallel-implementation leg of the devague workflow chain. Verbatim (already carried `type: command`). | 2026-05-26 (guildmaster 0.6.0) |
+| `outsource` | `../guildmaster/.claude/skills/outsource/` | **convertible** (re-broadcast via guildmaster) | Drives the `convertible` CLI as a *different mind* (`explore`/`review`/`write`). **Patched in place** (cite-don't-import exception, see below) for the afi exit-code/`hint:` contract, `render_prompt` replace order, and worktree-cleanup guard; added `type: command`. | 2026-05-31 |
 
 ## Re-sync procedure
 
@@ -71,6 +77,26 @@ The same in-place patch also bumped the documented `devex` version floor from
 `>=0.1` to `>=0.21` in the vendored `cicd` `SKILL.md` + `workflow.sh` (to match
 this doc's tooling-prerequisites and the `await`-era feature set) — likewise
 flagged for guildmaster on #48.
+
+### Local divergence — `outsource` afi-contract + correctness fixes (2026-05-31)
+
+The freshly vendored `outsource` skill (`scripts/outsource.sh`) was **patched in
+place** rather than carried verbatim — a deliberate cite-don't-import exception —
+to fix four issues a review (Qodo, discord-bot-cli PR#2) caught in the upstream
+copy:
+
+- **Exit codes** — user/parse-time errors now exit `1`, environment errors `2`
+  (was a blanket `2`), matching the afi-cli exit contract.
+- **`hint:` lines** — every `error:` path now emits a remediation `hint:`.
+- **Prompt render order** — `render_prompt` replaces `$BASE` before
+  `$ARGUMENTS`, so a literal `$BASE` in user text is no longer corrupted.
+- **Worktree cleanup** — the EXIT trap snapshots pre-existing `convertible/*`
+  branches and only deletes a drive branch this run created.
+
+The canonical fix belongs upstream in convertible (origin); filed as
+[agentculture/convertible#63](https://github.com/agentculture/convertible/issues/63).
+Re-sync once convertible's fixed copy is re-broadcast via guildmaster,
+reconciling without losing these changes.
 
 ## Tooling prerequisites
 
