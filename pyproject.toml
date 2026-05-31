@@ -21,6 +21,7 @@ Issues = "https://github.com/agentculture/discord-bot-cli/issues"
 
 [project.scripts]
 discord = "discord_bot_cli.cli:main"
+discord-bot-cli = "discord_bot_cli.cli:main"
 
 [build-system]
 requires = ["hatchling"]

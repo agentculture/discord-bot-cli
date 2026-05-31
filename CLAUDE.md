@@ -40,21 +40,21 @@ Line length is **100** everywhere (black, isort `black` profile, flake8 `max-lin
 Markdown is linted in CI with `markdownlint-cli2` (config `.markdownlint-cli2.yaml`;
 `.claude/skills/**` is excluded).
 
-### Running the CLI — the entry point is `discord`, not `discord-bot-cli`
+### Running the CLI
 
-`pyproject.toml` installs the console script as **`discord`**
-(`[project.scripts] discord = "discord_bot_cli.cli:main"`). The README quickstart
-and every in-CLI help string say `discord-bot-cli`, but that name is **not** an
-installed command — `uv run discord-bot-cli …` fails with `Failed to spawn:
-discord-bot-cli`. Use:
+`[project.scripts]` installs **two** console scripts, both pointing at
+`discord_bot_cli.cli:main`: `discord` and `discord-bot-cli`. So all of these
+work:
 
 ```bash
-uv run discord whoami                    # any verb
-uv run python -m discord_bot_cli learn   # equivalent module entry point
+uv run discord whoami                    # short form
+uv run discord-bot-cli whoami            # dist-name form (matches the docs)
+uv run python -m discord_bot_cli learn   # module entry point
 ```
 
-Three spellings of the same thing: package dir `discord_bot_cli`, dist/PyPI name
-`discord-bot-cli`, console script `discord`.
+The README quickstart and the in-CLI help/`explain` strings use
+`discord-bot-cli`; the `discord` alias is the ergonomic short command. The
+package dir is `discord_bot_cli`, the dist/PyPI name is `discord-bot-cli`.
 
 ## Architecture
 
