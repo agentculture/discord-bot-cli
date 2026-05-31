@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/). This project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-05-31
+
+### Changed
+
+- Replaced the bootstrap seed `CLAUDE.md` with a tailored runtime prompt for the agent (the `/init` pass): documents the uv/pytest/lint commands and the agent-first rubric gate, the two-layer architecture (the `cli/` argparse dispatcher with the structured `error:`/`hint:` contract and the `explain/` path-tuple catalog), where identity is resolved (`_commands/whoami.py` reads `culture.yaml` with no PyYAML), the zero-runtime-dependency constraint, and the version-bump-every-PR / `cicd` PR workflow. Flags that the installed console script is `discord` (not `discord-bot-cli`, which the README/help strings still reference).
+
 ## [0.1.3] - 2026-05-31
 
 ### Changed
