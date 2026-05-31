@@ -1,7 +1,8 @@
 """Markdown catalog for ``discord-bot-cli explain <path>``.
 
-Each entry is verbatim markdown. Keys are command-path tuples. The empty tuple
-and ``("discord-bot-cli",)`` both resolve to the root entry.
+Each entry is verbatim markdown. Keys are command-path tuples. The empty tuple,
+``("discord-bot-cli",)`` (dist name), and ``("discord",)`` (console script) all
+resolve to the root entry.
 
 Keep bodies self-contained: an agent reading one entry should get enough
 context without chaining reads.
@@ -119,6 +120,11 @@ itself (distinct from the global `overview`, which describes the agent).
 ENTRIES: dict[tuple[str, ...], str] = {
     (): _ROOT,
     ("discord-bot-cli",): _ROOT,
+    # The installed console script is ``discord`` (see ``[project.scripts]``),
+    # so ``discord explain discord`` resolves to the root entry too. Keeps the
+    # agent-first rubric's ``explain_self`` check (``explain <script-name>``)
+    # green alongside the ``discord-bot-cli`` dist-name key above.
+    ("discord",): _ROOT,
     ("whoami",): _WHOAMI,
     ("learn",): _LEARN,
     ("explain",): _EXPLAIN,
