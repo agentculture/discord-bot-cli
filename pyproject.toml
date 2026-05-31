@@ -1,6 +1,6 @@
 [project]
 name = "discord-bot-cli"
-version = "0.1.4"
+version = "0.1.5"
 description = "Agent + CLI that gives an agent Discord access via a bot."
 readme = "README.md"
 license = "MIT"
