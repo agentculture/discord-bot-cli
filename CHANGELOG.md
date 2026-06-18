@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/). This project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-06-18
+
+### Changed
+
+- **Re-vendored the `ask-colleague` skill wrapper from its canonical colleague
+  source** (`.claude/skills/ask-colleague/scripts/ask-colleague.sh`): the wrapper
+  now drives the `colleague flight` pilot verbs — `monitor` / `guide` / `stop`
+  plus the `--watch` flag that arms a drive (`explore` / `review` / `write`) so it
+  can be watched, guided mid-flight, and cooperatively stopped. This supersedes the
+  earlier colleague#186 snapshot (which predated flights). It keeps the `--json`
+  machine-readable output added then — stdout carries **only** the result JSON (the
+  drive verbs emit the normalized `TaskResult`; `feedback` / `clean` forward
+  `--json` to colleague) while every diagnostic/digest line goes to stderr. The
+  bundled `SKILL.md` template documents the new verbs/flag; an existing downstream
+  `SKILL.md` is left untouched (it carries a repo-specific provenance token and
+  may diverge). Where the skill was absent, it is added fresh (wrapper +
+  `SKILL.md` + prompts).
+
 ## [0.1.4] - 2026-05-31
 
 ### Changed
