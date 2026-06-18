@@ -25,6 +25,8 @@ uv run teken cli doctor . --strict    # the agent-first rubric gate CI runs
 
 ## CLI
 
+### Introspection verbs
+
 | Verb | What it does |
 |------|--------------|
 | `whoami` | Report this agent's nick, version, backend, and model from `culture.yaml`. |
@@ -37,6 +39,43 @@ uv run teken cli doctor . --strict    # the agent-first rubric gate CI runs
 Every command supports `--json`. Results go to stdout, errors/diagnostics to
 stderr (never mixed). Exit codes: `0` success, `1` user error, `2` environment
 error, `3+` reserved.
+
+### Discord verbs
+
+Give an agent Discord access through a bot. These need a bot token and the
+optional `discord` extra (which pulls in `discord.py`):
+
+```bash
+uv pip install 'discord-bot-cli[discord]'   # or: pip install 'discord-bot-cli[discord]'
+export DISCORD_BOT_TOKEN=...                 # read from the env, never a flag
+```
+
+| Verb | What it does |
+|------|--------------|
+| `channel list <guild_id>` | List a guild's channels. |
+| `channel messages <channel_id> [--limit N]` | Read the last N messages (1–100, default 20). |
+| `message post <channel_id> <content>` | Post a message; returns its id. |
+| `message reply <channel_id> <message_id> <content>` | Reply to a message. |
+| `message react <channel_id> <message_id> <emoji>` | Add a reaction. |
+| `thread create <channel_id> --name <name> [--message <id>]` | Create a thread (anchored or standalone). |
+| `thread post <thread_id> <content>` | Post a message into a thread. |
+| `user get <user_id>` | Look up a user's public profile. |
+
+Each verb is **one-shot**: it connects, performs one action, and exits (no
+daemon, no gateway subscription). `post`/`reply`/`thread create` return the
+created id in `--json` so output composes into the next call. A missing token or
+the absent extra exits `2` with a hint; bad ids exit `1`.
+
+```bash
+# discover, read, write, compose
+discord channel list 1234567890 --json
+discord channel messages 1234567890 --limit 50 --json
+MSG=$(discord message post 1234567890 "hello" --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')
+discord message react 1234567890 "$MSG" 👍
+```
+
+> The runtime package itself stays dependency-free — `discord.py` is imported
+> lazily inside the verb handlers, so a plain install never pulls it in.
 
 ## Make it your own
 

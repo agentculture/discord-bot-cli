@@ -32,6 +32,18 @@ _VERBS = [
     "doctor — check the agent-identity invariants",
 ]
 
+# Discord domain verbs (need $DISCORD_BOT_TOKEN + the [discord] extra; one-shot).
+_DISCORD_VERBS = [
+    "channel list <guild_id> — list a guild's channels",
+    "channel messages <channel_id> [--limit N] — read the last N messages",
+    "message post <channel_id> <content> — post a message",
+    "message reply <channel_id> <message_id> <content> — reply to a message",
+    "message react <channel_id> <message_id> <emoji> — add a reaction",
+    "thread create <channel_id> --name <name> [--message <id>] — create a thread",
+    "thread post <thread_id> <content> — post into a thread",
+    "user get <user_id> — look up a user",
+]
+
 
 def agent_sections() -> list[dict[str, object]]:
     """Sections describing the agent (used by the global verb)."""
@@ -47,6 +59,7 @@ def agent_sections() -> list[dict[str, object]]:
             ],
         },
         {"title": "Verbs", "items": list(_VERBS)},
+        {"title": "Discord verbs", "items": list(_DISCORD_VERBS)},
         {"title": "Sibling-pattern artifacts", "items": list(_ARTIFACTS)},
     ]
 
