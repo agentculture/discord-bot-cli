@@ -17,6 +17,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - overview/learn/explain now surface the Discord verbs; explain catalog gains channel/message/thread/user entries
 - markdownlint ignores devague specs/plans/.devague artifacts and .venv; CI markdownlint glob updated to match
+- SonarCloud triage: `discord_client.run`/`_run_async` use PEP 695 generic syntax (`def run[T](...)`) instead of a module-level `TypeVar`; the duplicated "Numeric channel id." argparse help in `message.py` is a single `_CHANNEL_ID_HELP` constant
 
 ## [0.1.5] - 2026-06-18
 

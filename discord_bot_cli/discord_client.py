@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from discord_bot_cli.cli._errors import EXIT_ENV_ERROR, EXIT_USER_ERROR, CliError
 
@@ -39,8 +39,6 @@ _INSTALL_HINT = (
     "install the Discord extra: uv add 'discord-bot-cli[discord]' "
     "(or: pip install 'discord-bot-cli[discord]')"
 )
-
-T = TypeVar("T")
 
 
 def require_token() -> str:
@@ -90,7 +88,7 @@ def parse_id(value: str, label: str) -> int:
         ) from exc
 
 
-def run(action: Callable[["discord.Client"], Awaitable[T]]) -> T:
+def run[T](action: Callable[["discord.Client"], Awaitable[T]]) -> T:
     """Run a one-shot Discord action: login, await ``action(client)``, close.
 
     ``action`` is an async callable that receives a logged-in ``discord.Client``
@@ -102,7 +100,7 @@ def run(action: Callable[["discord.Client"], Awaitable[T]]) -> T:
     return asyncio.run(_run_async(discord, token, action))
 
 
-async def _run_async(
+async def _run_async[T](
     discord: Any,
     token: str,
     action: Callable[["discord.Client"], Awaitable[T]],

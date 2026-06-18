@@ -28,6 +28,8 @@ _VERBS = [
     "message overview — describe this noun (this command)",
 ]
 
+_CHANNEL_ID_HELP = "Numeric channel id."
+
 
 def cmd_message_post(args: argparse.Namespace) -> int:
     channel_id = discord_client.parse_id(args.channel_id, "channel_id")
@@ -102,20 +104,20 @@ def register(sub: argparse._SubParsersAction) -> None:
     noun_sub = p.add_subparsers(dest="message_command", parser_class=type(p))
 
     pp = noun_sub.add_parser("post", help="Post a message to a channel.")
-    pp.add_argument("channel_id", help="Numeric channel id.")
+    pp.add_argument("channel_id", help=_CHANNEL_ID_HELP)
     pp.add_argument("content", help="Message text.")
     add_json(pp)
     pp.set_defaults(func=cmd_message_post)
 
     pr = noun_sub.add_parser("reply", help="Reply to a message.")
-    pr.add_argument("channel_id", help="Numeric channel id.")
+    pr.add_argument("channel_id", help=_CHANNEL_ID_HELP)
     pr.add_argument("message_id", help="Numeric id of the message to reply to.")
     pr.add_argument("content", help="Reply text.")
     add_json(pr)
     pr.set_defaults(func=cmd_message_reply)
 
     prx = noun_sub.add_parser("react", help="Add a reaction to a message.")
-    prx.add_argument("channel_id", help="Numeric channel id.")
+    prx.add_argument("channel_id", help=_CHANNEL_ID_HELP)
     prx.add_argument("message_id", help="Numeric id of the message to react to.")
     prx.add_argument("emoji", help="Emoji (unicode like 👍 or 'name:id' for a custom emoji).")
     add_json(prx)
