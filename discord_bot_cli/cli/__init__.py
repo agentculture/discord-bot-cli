@@ -62,11 +62,15 @@ def _argv_has_json(argv: list[str] | None) -> bool:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    from discord_bot_cli.cli._commands import channel as _channel_group
     from discord_bot_cli.cli._commands import cli as _cli_group
     from discord_bot_cli.cli._commands import doctor as _doctor_cmd
     from discord_bot_cli.cli._commands import explain as _explain_cmd
     from discord_bot_cli.cli._commands import learn as _learn_cmd
+    from discord_bot_cli.cli._commands import message as _message_group
     from discord_bot_cli.cli._commands import overview as _overview_cmd
+    from discord_bot_cli.cli._commands import thread as _thread_group
+    from discord_bot_cli.cli._commands import user as _user_group
     from discord_bot_cli.cli._commands import whoami as _whoami_cmd
 
     parser = _CliArgumentParser(
@@ -88,9 +92,11 @@ def _build_parser() -> argparse.ArgumentParser:
     _overview_cmd.register(sub)
     _doctor_cmd.register(sub)
     _cli_group.register(sub)
-    # Register your own noun groups here:
-    #   from discord_bot_cli.cli._commands import my_noun as _my_noun_group
-    #   _my_noun_group.register(sub)
+    # Discord domain noun groups (the bot-access verbs):
+    _channel_group.register(sub)
+    _message_group.register(sub)
+    _thread_group.register(sub)
+    _user_group.register(sub)
 
     return parser
 

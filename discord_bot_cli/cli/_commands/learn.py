@@ -21,14 +21,25 @@ Scaffold for a new Culture mesh agent: an agent-first CLI (cited from the teken
 guildmaster skill kit under .claude/skills/, and a deploy/CI baseline. Clone it,
 rename the package, and edit culture.yaml to mint a new agent.
 
-Commands
---------
+Introspection commands
+----------------------
   discord-bot-cli whoami             Identity from culture.yaml.
   discord-bot-cli learn              This self-teaching prompt.
   discord-bot-cli explain <path>...  Markdown docs for any noun/verb path.
   discord-bot-cli overview           Descriptive snapshot of the agent.
   discord-bot-cli doctor             Check the agent-identity invariants.
   discord-bot-cli cli overview       Describe the CLI surface itself.
+
+Discord commands (need $DISCORD_BOT_TOKEN + the [discord] extra; one-shot)
+-------------------------------------------------------------------------
+  discord-bot-cli channel list <guild_id>
+  discord-bot-cli channel messages <channel_id> [--limit N]
+  discord-bot-cli message post <channel_id> <content>
+  discord-bot-cli message reply <channel_id> <message_id> <content>
+  discord-bot-cli message react <channel_id> <message_id> <emoji>
+  discord-bot-cli thread create <channel_id> --name <name> [--message <id>]
+  discord-bot-cli thread post <thread_id> <content>
+  discord-bot-cli user get <user_id>
 
 Machine-readable output
 -----------------------
@@ -60,7 +71,19 @@ def _as_json_payload() -> dict[str, object]:
             {"path": ["overview"], "summary": "Descriptive snapshot of the agent."},
             {"path": ["doctor"], "summary": "Check the agent-identity invariants."},
             {"path": ["cli", "overview"], "summary": "Describe the CLI surface."},
+            {"path": ["channel", "list"], "summary": "List a guild's channels."},
+            {"path": ["channel", "messages"], "summary": "Read the last N messages of a channel."},
+            {"path": ["message", "post"], "summary": "Post a message to a channel."},
+            {"path": ["message", "reply"], "summary": "Reply to a message."},
+            {"path": ["message", "react"], "summary": "Add a reaction to a message."},
+            {"path": ["thread", "create"], "summary": "Create a thread (anchored or standalone)."},
+            {"path": ["thread", "post"], "summary": "Post a message into a thread."},
+            {"path": ["user", "get"], "summary": "Look up a Discord user."},
         ],
+        "discord_auth": {
+            "token_env": "DISCORD_BOT_TOKEN",
+            "extra": "pip install 'discord-bot-cli[discord]'",
+        },
         "exit_codes": {
             "0": "success",
             "1": "user-input error",

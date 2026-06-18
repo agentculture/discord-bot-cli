@@ -1,6 +1,6 @@
 [project]
 name = "discord-bot-cli"
-version = "0.1.5"
+version = "0.2.0"
 description = "Agent + CLI that gives an agent Discord access via a bot."
 readme = "README.md"
 license = "MIT"
@@ -14,6 +14,14 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = []
+
+# Runtime stays dependency-free (see CLAUDE.md "Hard constraints"). The Discord
+# verbs need discord.py, so it lives here as an OPTIONAL extra, lazy-imported
+# inside the command handlers — mirroring ec2-cli's boto3 and reterminal's
+# Pillow. A verb run without the extra returns EXIT_ENV_ERROR(2) with an install
+# hint, never an ImportError traceback.
+[project.optional-dependencies]
+discord = ["discord.py>=2.4"]
 
 [project.urls]
 Homepage = "https://github.com/agentculture/discord-bot-cli"
@@ -40,6 +48,9 @@ dev = [
     "isort>=5.12.0",
     "black>=23.7.0",
     "teken>=0.8",
+    # The Discord extra, so CI exercises the verb code paths (the tests stub the
+    # transport seam, but the modules + static guards still import-scan).
+    "discord.py>=2.4",
 ]
 
 [tool.coverage.run]
@@ -69,7 +80,9 @@ target-version = ["py312"]
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-skips = ["B101", "B404", "B603"]
+# B105: the only "hardcoded password" hit is the constant "DISCORD_BOT_TOKEN" —
+# the NAME of the env var we read the token from, never a secret value.
+skips = ["B101", "B404", "B603", "B105"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

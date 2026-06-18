@@ -16,8 +16,16 @@ config:
 
 ignores:
   - "node_modules/**"
+  # The CI lint job runs `uv sync` first, so .venv exists; third-party packages
+  # (e.g. idna via discord.py→aiohttp) ship their own markdown licenses.
+  - ".venv/**"
   - ".local/**"
   - ".afi/**"
   - ".teken/**"
   # Vendored skills are cited verbatim from guildmaster — do not reformat them.
   - ".claude/skills/**"
+  # devague-generated specs/plans/frames carry literal <text>/<id>/<name>
+  # placeholders (MD033) from frame text — they're artifacts, not authored prose.
+  - "docs/specs/**"
+  - "docs/plans/**"
+  - ".devague/**"

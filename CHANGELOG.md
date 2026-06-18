@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/). This project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-06-18
+
+### Added
+
+- Discord domain verbs over discord.py (optional [discord] extra): channel list/messages, message post/reply/react, thread create/post, user get — each one-shot, agent-first, with --json
+- discord_bot_cli/discord_client.py transport seam: DISCORD_BOT_TOKEN auth, lazy discord.py import, async one-shot run() that always closes the client, and discord exception->CliError mapping
+- tests/test_no_runtime_deps.py guard asserting dependencies==[] and no top-level third-party imports
+
+### Changed
+
+- overview/learn/explain now surface the Discord verbs; explain catalog gains channel/message/thread/user entries
+- markdownlint ignores devague specs/plans/.devague artifacts and .venv; CI markdownlint glob updated to match
+
 ## [0.1.5] - 2026-06-18
 
 ### Changed

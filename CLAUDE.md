@@ -2,16 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What this repo is (and isn't yet)
+## What this repo is
 
 `discord-bot-cli` is an AgentCulture mesh agent whose stated domain is *"giving
-an agent Discord access via a bot."* **That domain is not implemented yet.** What
-exists today is the **culture-agent-template** scaffold: a generic,
-dependency-free **agent-first introspection CLI** (the `afi-cli` pattern, cited
-from [teken](https://github.com/agentculture/teken)) plus a mesh identity and a
-vendored skill kit. Treat the current CLI as the substrate to build the Discord
-bot on, not the finished product. (The previous `CLAUDE.md` was the template's
-self-initializing seed; this file replaces it.)
+an agent Discord access via a bot."* It started life as the
+**culture-agent-template** scaffold — a generic, dependency-free **agent-first
+introspection CLI** (the `afi-cli` pattern, cited from
+[teken](https://github.com/agentculture/teken)) plus a mesh identity and a
+vendored skill kit — and the **first Discord increment now ships on top of it**:
+one-shot `channel` / `message` / `thread` / `user` verbs over `discord.py`. The
+introspection scaffold is still the substrate; the Discord verbs are the first
+domain layer built on it (see *Architecture → Discord domain* below).
 
 ## Commands
 
@@ -110,6 +111,30 @@ helpers — so the introspection verbs can't drift from `whoami`.
 `gemini`→`GEMINI.md`) plus `skills_present`. Exit 1 when unhealthy; from a wheel
 install with no `culture.yaml` it emits one info check and exits 0.
 
+**Discord domain — `discord_bot_cli/discord_client.py` (the transport seam):**
+
+The single place that talks to `discord.py`. Every Discord verb routes through
+`run(action)`, which: reads the bot token from `$DISCORD_BOT_TOKEN` via
+`require_token()` (env only, never a flag → `EXIT_ENV_ERROR(2)` if unset),
+**lazy-imports** `discord` via `require_discord()` (so the runtime stays
+`dependencies = []`; absent extra → `EXIT_ENV_ERROR(2)` + install hint, never an
+`ImportError` traceback), then `asyncio.run`s a one-shot session — `login` →
+`await action(client)` → **always `close()`** in a `finally` (no daemon, no
+gateway subscription; `Intents.none()`). `discord.py`'s `LoginFailure` /
+`Forbidden` / `NotFound` / `HTTPException` / `DiscordException` are mapped to
+`CliError` so nothing leaks. `parse_id()` turns a bad snowflake into a
+`EXIT_USER_ERROR(1)` with a hint. **This is the seam the tests stub** — patch
+`discord_client.run` to feed a recording fake client (`tests/conftest.py`); no
+live token or network is ever needed.
+
+The verbs live in `_commands/{channel,message,thread,user}.py` (nouns matching
+Discord REST resources; `_discord_common.py` holds the shared `overview`
+renderer + `--json` helper). Each `cmd_*` builds an `async def action(client)`
+coroutine and calls `discord_client.run(action)`. `discord.py` is the optional
+`[discord]` extra in `pyproject.toml` (also in the dev group so CI exercises the
+code paths). `post` / `reply` / `thread create` return the created id in `--json`
+so output composes into the next verb.
+
 ### Adding a command
 
 1. Create `discord_bot_cli/cli/_commands/<verb>.py` with `cmd_<verb>(args) -> int`
@@ -126,8 +151,13 @@ install with no `culture.yaml` it emits one info check and exits 0.
 
 - **Zero runtime dependencies.** `pyproject.toml` has `dependencies = []` on
   purpose (hence the hand-rolled YAML scanner). Keep the *runtime* package
-  dependency-free; third-party packages go in the `dev` group only. Adding a
-  runtime dep is a real architectural decision. `__version__`
+  dependency-free; third-party packages go in the `dev` group, or — for a domain
+  capability — under `[project.optional-dependencies]` and **lazy-imported inside
+  the handler** (the sanctioned pattern: `discord.py` under the `discord` extra,
+  imported in `discord_client.require_discord()`, never at module top level).
+  `tests/test_no_runtime_deps.py` enforces both halves: `dependencies == []` and
+  no top-level third-party import anywhere in the package. Adding a *hard* runtime
+  dep is a real architectural decision. `__version__`
   (`discord_bot_cli/__init__.py`) is read from installed package metadata via
   `importlib.metadata`, so the single version source is `pyproject.toml` — after
   a bump, re-run `uv sync` for `whoami`/`overview` to report the new number.
