@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/). This project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-19
+
+### Added
+
+- tests/test_live_discord.py: opt-in live tests that drive the real Discord API (the `live` pytest marker). Doubly gated — they self-skip unless `DISCORD_LIVE_TESTS=1` and `DISCORD_BOT_TOKEN` are both set — so a routine `pytest` never logs in or posts even with a token in the env. Covers reads (user/channel list/channel messages), the full write chain (post → reply → react → thread create → thread post, composing on each returned id, posting to a sandbox channel), and the live exit-1 error mapping
+- .github/workflows/live-tests.yml: a dedicated CI lane for the live tests on `workflow_dispatch` + push to `main`. No-ops on forks / token-less repos (gated on `env.DISCORD_BOT_TOKEN != ''`); reads the bot token from the `DISCORD_BOT_TOKEN` secret and the guild/channel/user ids from repository variables (defaulting to the experiments sandbox)
+- `live` pytest marker registered in pyproject.toml
+
 ## [0.2.0] - 2026-06-18
 
 ### Added

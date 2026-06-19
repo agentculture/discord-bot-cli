@@ -1,6 +1,6 @@
 [project]
 name = "discord-bot-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "Agent + CLI that gives an agent Discord access via a bot."
 readme = "README.md"
 license = "MIT"
@@ -87,3 +87,6 @@ skips = ["B101", "B404", "B603", "B105"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    "live: exercises the real Discord API; opt-in (needs DISCORD_LIVE_TESTS=1 + DISCORD_BOT_TOKEN), skipped by default",
+]

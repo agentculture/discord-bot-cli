@@ -1,0 +1,45 @@
+name: Live Discord Tests
+
+# Drives the real Discord API (the `live` pytest marker) — separate from the
+# mocked suite in tests.yml so it never gates PRs and never runs on forks.
+#
+# Triggers: manual (workflow_dispatch) and post-merge (push to main, a smoke
+# check). NOT on pull_request — fork PRs can't see the secret, and we don't want
+# every PR commit posting to the test channel.
+#
+# Setup: add the bot token as the `DISCORD_BOT_TOKEN` repository SECRET. The
+# guild/channel/user ids default to the JetsonBot-experiments sandbox below;
+# override them per-repo with repository VARIABLES of the same names. The write
+# tests POST to DISCORD_TEST_CHANNEL_ID, so keep it a throwaway channel.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Promote the secret to job env so the run step can gate on
+    # `env.DISCORD_BOT_TOKEN != ''` (secrets.* isn't allowed in `if:`). This
+    # makes the whole thing a no-op on forks and on repos without the secret.
+    env:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4
+
+      - run: uv python install 3.12
+
+      - run: uv sync
+
+      - name: live discord tests
+        if: env.DISCORD_BOT_TOKEN != ''
+        env:
+          DISCORD_LIVE_TESTS: "1"
+          DISCORD_TEST_GUILD_ID: ${{ vars.DISCORD_TEST_GUILD_ID || '1413999242648748195' }}
+          DISCORD_TEST_CHANNEL_ID: ${{ vars.DISCORD_TEST_CHANNEL_ID || '1511238958338539560' }}
+          DISCORD_TEST_USER_ID: ${{ vars.DISCORD_TEST_USER_ID || '1446629165041455255' }}
+        run: uv run pytest -m live -v

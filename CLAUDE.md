@@ -26,6 +26,27 @@ uv run pytest -k explain            # tests matching an expression
 uv run pytest -n auto --cov=discord_bot_cli --cov-report=term   # coverage (report fail_under=60)
 ```
 
+**Live tests (opt-in, real Discord).** `tests/test_live_discord.py` (marker
+`live`) drives the *real* `discord_client.run` → discord.py → Discord REST path
+instead of the stubbed seam. They are **doubly gated** — they self-skip unless
+**both** `DISCORD_LIVE_TESTS=1` and `DISCORD_BOT_TOKEN` are set — so a routine
+`uv run pytest` never logs in or posts, even on a box with a token exported (the
+default run *collects* them and reports them skipped). The write tests POST to
+`DISCORD_TEST_CHANNEL_ID`, and there is no `delete` verb yet, so point it at a
+sandbox channel. Run them with:
+
+```bash
+DISCORD_LIVE_TESTS=1 \
+DISCORD_TEST_GUILD_ID=...  DISCORD_TEST_CHANNEL_ID=...  DISCORD_TEST_USER_ID=... \
+uv run pytest -m live -v
+```
+
+Remotely they run from `.github/workflows/live-tests.yml` (manual
+`workflow_dispatch` + push to `main`, **not** per-PR): add the bot token as the
+`DISCORD_BOT_TOKEN` repo **secret**; the ids come from repo **variables**
+(`DISCORD_TEST_GUILD_ID` / `_CHANNEL_ID` / `_USER_ID`, defaulting to the
+experiments sandbox). The job no-ops on forks and token-less repos.
+
 Lint/format — the CI `lint` job runs all of these and **fails on any**:
 
 ```bash
