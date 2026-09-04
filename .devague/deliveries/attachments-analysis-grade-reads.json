@@ -2,7 +2,7 @@
   "plan_slug": "attachments-analysis-grade-reads",
   "schema_version": 2,
   "created": "2026-09-04T16:24:10Z",
-  "updated": "2026-09-04T18:06:24Z",
+  "updated": "2026-09-04T18:50:56Z",
   "deviations": [
     {
       "id": "d1",
@@ -432,6 +432,25 @@
       "status": "proposed",
       "superseded": false,
       "seq": 23
+    },
+    {
+      "id": "e22",
+      "obligation_ref": "o2",
+      "test_ref": "tests/test_attachments.py::test_build_files_opens_handles_that_close_files_then_releases, ::test_close_files_is_idempotent_and_tolerates_junk; tests/test_timewindow.py::test_absurd_duration_is_a_user_error_not_an_internal_bug; tests/test_discord_user.py::test_ids_file_with_invalid_utf8_is_a_clean_cli_error, ::test_batch_error_line_carries_its_remediation_on_one_line",
+      "behavior_text": "every reviewer-identified escape from the CliError contract is closed, and attachment handles are released deterministically",
+      "contract_text": "attachment and input failures route through the CliError contract with a remediation, no traceback",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "Qodo review found 4 real defects (3 bugs + 1 observability gap) that 164 passing tests had not; all 4 fixed with regression tests, 169 passing. SonarCloud went 17 OPEN -> 0 OPEN, quality gate OK, 7/7 review threads resolved.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T21:50:56+03:00",
+        "commit": "f30f65b"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 24
     }
   ],
   "deltas": [
@@ -541,6 +560,54 @@
       "evidence_refs": [
         "e18"
       ],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b9",
+      "kind": "added",
+      "behavior_text": "Attachment handles are closed deterministically: build_files() closes already-opened files if a later path fails, and every verb closes them in a finally around run(). Not in the plan \u2014 surfaced by review as a descriptor leak that matters because main() runs in-process in tests and embedding callers.",
+      "caused_by": [
+        "c13"
+      ],
+      "evidence_refs": [],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b10",
+      "kind": "added",
+      "behavior_text": "A non-UTF-8 --ids-file is mapped to CliError with a remediation. UnicodeDecodeError subclasses ValueError, not OSError, so it previously escaped the error contract as an unexpected internal error.",
+      "caused_by": [
+        "c17"
+      ],
+      "evidence_refs": [],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b11",
+      "kind": "added",
+      "behavior_text": "An out-of-range --since duration (unbounded digit run) is reported as invalid user input with the accepted-format hint, instead of an OverflowError rendered as a generic internal error.",
+      "caused_by": [
+        "c28"
+      ],
+      "evidence_refs": [],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b12",
+      "kind": "added",
+      "behavior_text": "Per-id batch failures carry their remediation inline: '<id>  error: <msg> (hint: <remediation>)'. Kept on one physical line because the confirmed q8 contract is one line per id \u2014 the two-line form broke two tests.",
+      "caused_by": [
+        "c17"
+      ],
+      "evidence_refs": [],
       "origin": "llm",
       "status": "proposed",
       "superseded": false
