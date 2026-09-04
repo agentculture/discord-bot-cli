@@ -120,8 +120,10 @@ def _as_json_payload() -> dict[str, object]:
             {
                 "path": ["user", "get"],
                 "summary": (
-                    "Look up one or more Discord users, in input order; --json is "
-                    "always an array, even for a single id."
+                    "Look up one or more Discord users: ids as positional args "
+                    "and/or --ids-file <path|-> (newline-delimited, - for stdin), "
+                    "resolved in input order; --json is always an array, even for "
+                    "a single id."
                 ),
             },
         ],
