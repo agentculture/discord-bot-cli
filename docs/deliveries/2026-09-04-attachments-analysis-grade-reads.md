@@ -5,9 +5,9 @@ baseline: `devague summary skeleton`
 
 ## Intent
 
-Ship discord-bot-cli 0.6.0: file attachments on the write verbs (issue #13,
-filed by sensibo-cli) and the read fields an analysis pipeline needs (issue
-#14, filed by jetson-ai-lab-cli). The plan was seeded from a frame that went
+Ship discord-bot-cli 0.6.0: file attachments on the write verbs (issue #13, filed by
+sensibo-cli) and the read fields an analysis pipeline needs (issue #14, filed
+by jetson-ai-lab-cli). The plan was seeded from a frame that went
 through `/scope`, `/think` and `/challenge`, then fanned out to parallel
 agents in isolated worktrees over seven dependency waves, each merge gated by
 the test suite passing before and after.
