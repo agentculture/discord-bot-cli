@@ -193,11 +193,11 @@ path allow-listing** — and uploads it to Discord (a third party); this CLI is
 driven by other agents over the mesh, so which paths reach `--file` is the
 operator's responsibility, not this CLI's. `--json` on `post`/`reply` adds an
 `attachments` list, one entry per file: `{"id", "filename", "url", "size"}`.
-That `url` is a **reference, not storage** — discord.py documents that it
-a **signed CDN link carrying `?ex=` (expiry), `&is=` (issued) and `&hm=`
-(signature) parameters — measured at ~24h of validity — and it 404s outright
-once the message is deleted. Re-fetch the message to get a fresh URL; never
-store one and expect it to keep resolving.
+That `url` is a **reference, not storage**. It is a signed CDN link carrying
+`?ex=` (expiry), `&is=` (issued) and `&hm=` (signature) parameters, measured
+at ~24h of validity — so it stops resolving on its own even while the message
+still exists — and it 404s outright once the message is deleted. Re-fetch the
+message for a fresh URL; never store one and expect it to keep working.
 
 ## Usage
 
