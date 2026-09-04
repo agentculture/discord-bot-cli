@@ -2,7 +2,7 @@
   "plan_slug": "attachments-analysis-grade-reads",
   "schema_version": 2,
   "created": "2026-09-04T16:24:10Z",
-  "updated": "2026-09-04T17:21:05Z",
+  "updated": "2026-09-04T17:49:26Z",
   "deviations": [
     {
       "id": "d1",
@@ -28,7 +28,7 @@
         "h10"
       ],
       "origin": "llm",
-      "status": "proposed",
+      "status": "approved",
       "classification": "acceptable",
       "seq": 2
     }
@@ -436,6 +436,20 @@
       ],
       "evidence_refs": [
         "e17"
+      ],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b7",
+      "kind": "amended",
+      "behavior_text": "The 413 error does NOT name the byte size that was sent \u2014 it surfaces Discord's own status text plus a boost-tier remediation instead. discord.py's HTTPException records only response/status/code/text, and the q2 decision's no-pre-flight rule means no earlier layer captured the size either.",
+      "caused_by": [
+        "d2"
+      ],
+      "evidence_refs": [
+        "e10"
       ],
       "origin": "llm",
       "status": "proposed",
