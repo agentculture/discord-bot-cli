@@ -77,6 +77,18 @@ discord message react 1234567890 "$MSG" 👍
 > The runtime package itself stays dependency-free — `discord.py` is imported
 > lazily inside the verb handlers, so a plain install never pulls it in.
 
+### Live Discord tests
+
+`uv run pytest` never talks to real Discord — the whole suite runs against a
+stubbed client. `tests/test_live_discord.py` is a separate, opt-in lane (marker
+`live`) that drives the real bot; it self-skips unless **both**
+`DISCORD_LIVE_TESTS=1` and `DISCORD_BOT_TOKEN` are set. **These tests leave
+permanent artifacts** — messages, replies, reactions, threads, and a real
+`message post --file` upload — because there is no `delete` verb, so always
+point `DISCORD_TEST_CHANNEL_ID` at a disposable sandbox channel, never a real
+one. See [`CLAUDE.md`](CLAUDE.md) for the full env-var list and how to run
+them.
+
 ## Make it your own
 
 1. Rename the package `discord_bot_cli/` and the `discord-bot-cli`
