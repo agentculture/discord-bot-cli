@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/). This project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-09-04
+
+### Fixed
+
+- Republish as 0.7.0. Both 0.6.0 and 0.6.1 were refused by PyPI with 'This filename was previously used by a file that has since been deleted', so the whole 0.5.x-0.6.x range appears to have been uploaded and deleted at some point. PyPI blocks a deleted filename permanently and exposes no API to check which are burnt, so the only way forward is a version far enough clear of the deleted range. No code changed between 0.6.0, 0.6.1 and 0.7.0 — all three are the same release content; the number exists solely to obtain a filename PyPI has never seen.
+
 ## [0.6.1] - 2026-09-04
 
 ### Fixed
