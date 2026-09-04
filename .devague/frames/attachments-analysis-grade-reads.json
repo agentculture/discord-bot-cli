@@ -4,7 +4,7 @@
   "schema_version": 6,
   "status": "exported",
   "created": "2026-09-04T15:28:01Z",
-  "updated": "2026-09-04T15:53:12Z",
+  "updated": "2026-09-04T15:57:58Z",
   "claims": [
     {
       "id": "c1",
@@ -352,10 +352,17 @@
           "resolved": false,
           "blocking": false,
           "resolution": ""
+        },
+        {
+          "id": "q7",
+          "text": "What do --limit and --since mean together? Options: --limit caps the paged result (a windowed read can still truncate, and the coverage signal reports it), --limit is rejected as mutually exclusive with a window, or --limit is silently ignored once a window is given. The spec currently says only that the 1-100 validation is kept 'for the no-window case'.",
+          "resolved": true,
+          "blocking": true,
+          "resolution": "USER: --limit caps a windowed read as a safety ceiling, and the coverage signal reports that the window was not fully covered, naming what stopped it (limit vs window end). Gives a bounded first scan of a huge channel \u2014 the unbounded-walk worry in h4."
         }
       ],
       "links": [],
-      "instruction": "Per the q3 decision: --since accepts an ISO 8601 timestamp, a partial timestamp (date-only '2026-06-01' = midnight UTC that day), or a relative duration ('90d'); durations resolve CLI-side to now - delta. discord.py's history(after=) takes a datetime and supports limit=None for paging. Keep --limit's 1-100 validation for the no-window case; when a window is given, page and report coverage. The coverage signal must be present on every --json run, not only on truncation, so callers can assert on it unconditionally.",
+      "instruction": "Per the q3 decision: --since accepts an ISO 8601 timestamp, a partial timestamp (date-only '2026-06-01' = midnight UTC that day), or a relative duration ('90d'); durations resolve CLI-side to now - delta. ALWAYS attach tzinfo=UTC \u2014 discord.py 2.7.1 treats a naive datetime as LOCAL time (see c28). Per the q7 decision: --limit stays valid alongside a window and caps it as a safety ceiling; the coverage signal then reports fully_covered=false and names what stopped the walk (limit vs window end). The coverage signal must be present on every --json run, not only on truncation. Pass oldest_first explicitly or normalise after collection \u2014 history() flips its default when after= is given (see c27).",
       "revisions": []
     },
     {
@@ -404,10 +411,24 @@
           "resolved": true,
           "blocking": true,
           "resolution": "USER: always an array. 'user get <id> --json' emits a 1-element array too \u2014 one shape for consumers to parse. This is a breaking change to the current single-id object contract, so it takes a minor version bump and an explicit CHANGELOG entry."
+        },
+        {
+          "id": "q6",
+          "text": "What is the process exit code when a batch resolves some ids and fails others? Per-id error entries mean the run is neither a clean success nor a failure: 0 (the batch ran, inspect the entries), 1 (something the user asked for did not resolve), or a new partial code. The exit contract today is 0 ok / 1 user error / 2 env error / 3+ reserved.",
+          "resolved": true,
+          "blocking": true,
+          "resolution": "USER: exit 0 with per-id error entries. The batch ran as asked; an unresolvable id is data, not a CLI failure \u2014 a deleted account must not make a 200-id scan report failure. Callers inspect the entries, which they must do anyway."
+        },
+        {
+          "id": "q8",
+          "text": "What does the human (non --json) rendering of a multi-id 'user get' look like, and is per-id output order guaranteed to match input order? A consumer joining names back onto aggregated author ids needs stable ordering or must key on the id field.",
+          "resolved": true,
+          "blocking": false,
+          "resolution": "USER: one line per user in the human renderer, input order preserved and documented as a guarantee; error entries render on their own line. A consumer can zip results back onto its id list without keying on the id field."
         }
       ],
       "links": [],
-      "instruction": "Per the q1/v1 decisions: always-array is a BREAKING change to the current single-id object output \u2014 it needs a minor bump and an explicit CHANGELOG entry, and the explain/learn/overview prose must state it. Keep it one asyncio.run/login (the one-shot contract is about not leaving a daemon running, not about one REST call). Catch per-id NotFound/Forbidden inside the loop and record {id, error, remediation} rather than raising out of the action.",
+      "instruction": "Per the q1/v1 decisions: always-array is a BREAKING change to the current single-id object output \u2014 minor bump, explicit CHANGELOG entry, explain/learn/overview prose must state it, and the consumers must be told (c30). Per the q6 decision: exit 0 even when some ids fail; each failure is an {id, error, remediation} entry in the array, never a non-zero exit. Per the q8 decision: the human renderer emits one line per user in INPUT order (a documented guarantee), errors on their own line. Keep it one asyncio.run/login. Catch per-id NotFound/Forbidden inside the loop rather than letting them raise out of the action.",
       "revisions": [
         {
           "text": "'user get' gains a batch form that resolves many ids inside one discord_client.run() session and emits a JSON array, tolerant per id: an unresolvable id yields an error entry instead of failing the whole batch.",
@@ -565,6 +586,139 @@
       "links": [],
       "instruction": "Countable from the consumer's call site; assert the single-session property in a stub test by counting discord_client.run invocations.",
       "revisions": []
+    },
+    {
+      "id": "c27",
+      "kind": "requirement",
+      "text": "The paged read must emit oldest-first regardless of whether a window was given: discord.py's history() sets oldest_first=True by default when after= is passed, so channel.py's existing unconditional collected.reverse() would silently flip a windowed read into newest-first \u2014 the opposite of the documented 'oldest first, the natural reading order' contract.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h29",
+          "text": "Ordering is asserted by test on both paths \u2014 a windowed read and a plain --limit read each prove oldest-first \u2014 so the fix cannot regress silently the way the current single-path coverage allows.",
+          "status": "confirmed",
+          "instruction": ""
+        }
+      ],
+      "hard_questions": [],
+      "links": [],
+      "instruction": "Verified against discord.py 2.7.1: Messageable.history's oldest_first doc reads 'Defaults to True if after is specified, otherwise False.' Do not keep the bare reverse(); either pass oldest_first explicitly on every call or normalise ordering after collection. A regression test must assert ordering for BOTH the windowed and the non-windowed path \u2014 the current suite only covers the latter, so this bug would ship green.",
+      "revisions": []
+    },
+    {
+      "id": "c28",
+      "kind": "requirement",
+      "text": "Every datetime handed to history() must be timezone-aware UTC. discord.py treats a NAIVE datetime as LOCAL time, so the confirmed q3 decision that a date-only '--since 2026-06-01' means midnight UTC is only true if the CLI attaches tzinfo itself.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h30",
+          "text": "The timezone test is genuinely independent of the developer's box: it forces a non-UTC TZ and shows the resulting window is identical to the UTC run, rather than passing merely because CI happens to run in UTC.",
+          "status": "confirmed",
+          "instruction": ""
+        }
+      ],
+      "hard_questions": [],
+      "links": [],
+      "instruction": "Verified against discord.py 2.7.1: the before/after parameter docs read 'If the datetime is naive, it is assumed to be local time.' Parse to an aware UTC datetime at the CLI boundary; a test running under a non-UTC TZ env var must produce the same window as one under UTC, otherwise the box's timezone silently shifts the scan.",
+      "revisions": []
+    },
+    {
+      "id": "c29",
+      "kind": "requirement",
+      "text": "Attachment argument errors must be caught by the verb, not left to discord_client.run's handler chain: discord.File(path) raises OSError on an unreadable path and Messageable.send raises ValueError (files list too long) and TypeError \u2014 none of which are discord.* exceptions, so run()'s mapping misses them and they fall through to the generic catch-all, losing the typed remediation c13 promises.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h31",
+          "text": "Every non-discord exception the attachment path can raise is enumerated from the installed library's own signatures and Raises sections, not guessed \u2014 and each maps to a CliError with a remediation, verified by asserting the stderr contract in tests.",
+          "status": "confirmed",
+          "instruction": ""
+        }
+      ],
+      "hard_questions": [],
+      "links": [],
+      "instruction": "Verified against discord.py 2.7.1: File.__init__ opens fp eagerly; send()'s Raises section lists ValueError for 'the files list is not of the appropriate size' and TypeError for file/files conflicts. Catch OSError around File construction and assert the 10-file cap before calling send, so the library's own ValueError is never the path a user sees.",
+      "revisions": []
+    },
+    {
+      "id": "c30",
+      "kind": "requirement",
+      "text": "Before 0.6.0 is released, the two consumers that filed #13 and #14 are told about the breaking 'user get' array change \u2014 a comment on each issue naming the version and the new shape.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h32",
+          "text": "The notice actually reaches the consumers before they upgrade: it lands as a comment on their filed issues (#13/#14), not only as a CHANGELOG line neither repo reads.",
+          "status": "confirmed",
+          "instruction": ""
+        }
+      ],
+      "hard_questions": [],
+      "links": [],
+      "instruction": "Route it through the communicate skill (agtag-backed, auto-signs '- discord-bot-cli (Claude)'). This is the overlooked-actor lens: the spec's own audience claim (c2) names exactly the two repos that a silent shape change would break, and neither is watching this repo's CHANGELOG.",
+      "revisions": []
+    },
+    {
+      "id": "c31",
+      "kind": "boundary",
+      "text": "--file performs an unsandboxed local read: any path the invoking process can open is uploaded to a third party. The CLI does not restrict paths, and it is not a confused-deputy guard \u2014 an agent handed a path uploads whatever is there. The operator owns which paths reach the flag.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h33",
+          "text": "The boundary is stated where an agent will actually see it \u2014 in 'explain message post' and the learn output, not only in this spec \u2014 since the CLI's self-teaching surface is what the next agent reads before using the flag.",
+          "status": "confirmed",
+          "instruction": ""
+        }
+      ],
+      "hard_questions": [],
+      "links": [],
+      "instruction": "",
+      "revisions": []
+    },
+    {
+      "id": "c32",
+      "kind": "boundary",
+      "text": "Posting is irreversible on this surface: there is no delete verb, so every message and every attachment this CLI creates \u2014 including live-test artifacts in the sandbox channel \u2014 is permanent as far as this tool is concerned. Removal is a manual Discord action.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h34",
+          "text": "The live-test lane's write tests are pointed at a channel where permanent artifacts are acceptable (the #spark-tests sandbox), and the docs say so, since no cleanup path exists.",
+          "status": "confirmed",
+          "instruction": ""
+        }
+      ],
+      "hard_questions": [],
+      "links": [],
+      "instruction": "",
+      "revisions": []
+    },
+    {
+      "id": "c33",
+      "kind": "boundary",
+      "text": "An attachment URL returned in --json is a reference, not durable storage: discord.py documents that Attachment.url 404s once the message is deleted, and proxy_url may survive only minutes. Callers must not treat the URL as an archive of the file they uploaded.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h35",
+          "text": "The --json field is named and documented so it cannot be mistaken for durable storage, and the spec does not promise the URL keeps working after the message is deleted.",
+          "status": "confirmed",
+          "instruction": ""
+        }
+      ],
+      "hard_questions": [],
+      "links": [],
+      "instruction": "",
+      "revisions": []
     }
   ],
   "open_vagueness": [
@@ -609,6 +763,33 @@
       "text": "Whether the hand-maintained learn/overview/catalog lists should eventually be generated from one source, since this is the second increment that has to update three prose lists by hand.",
       "kind": "follow_up",
       "claim_id": "c18",
+      "resolved": false,
+      "resolution": "",
+      "resolution_claim_id": null
+    },
+    {
+      "id": "v6",
+      "text": "The scan window moves while it pages: messages posted during a long walk of a busy channel land inside the requested window after the walk passed that point. Whether the coverage signal should account for this, or the window should be closed at a fixed upper bound taken at start, is undecided.",
+      "kind": "unknown_nonblocking",
+      "claim_id": "c15",
+      "resolved": false,
+      "resolution": "",
+      "resolution_claim_id": null
+    },
+    {
+      "id": "v7",
+      "text": "Whether Discord's CDN attachment URLs returned in --json carry signed expiry parameters on this API version \u2014 discord.py 2.7.1's Attachment.url docstring documents 404-on-delete but says nothing about signed expiry, and this pass did not make a live upload to check. Unverified either way.",
+      "kind": "unknown_nonblocking",
+      "claim_id": "c33",
+      "resolved": false,
+      "resolution": "",
+      "resolution_claim_id": null
+    },
+    {
+      "id": "v8",
+      "text": "Whether the CLI should ever grow path allow-listing or a --no-follow-symlinks style guard for --file. Out of scope here: this increment states the boundary rather than enforcing it.",
+      "kind": "out_of_scope",
+      "claim_id": "c31",
       "resolved": false,
       "resolution": "",
       "resolution_claim_id": null
@@ -697,8 +878,89 @@
       "seeds": [
         "c15"
       ]
+    },
+    {
+      "id": "s10",
+      "surface": "challenge pass / adjacent-code lens: channel.py history() + discord.py 2.7.1 Messageable.history",
+      "finding": "oldest_first defaults to True when after= is given, so the existing unconditional collected.reverse() silently inverts a windowed read. Read from the installed library's own docstring, not from the online docs.",
+      "seeds": [
+        "c27",
+        "c28"
+      ]
+    },
+    {
+      "id": "s11",
+      "surface": "challenge pass / failure-mode lens: discord.py 2.7.1 File.__init__ / Messageable.send Raises",
+      "finding": "File(fp) opens eagerly and raises OSError; send() raises ValueError on an over-long files list and TypeError on file/files conflicts. None are discord.* subclasses, so discord_client.run's handler chain does not map them.",
+      "seeds": [
+        "c29"
+      ]
+    },
+    {
+      "id": "s12",
+      "surface": "challenge pass / security lens: --file as an unsandboxed local read",
+      "finding": "The flag uploads any path the process can open to a third party, and this CLI is driven by other agents over the mesh. No sandboxing exists or is proposed; the honest output is a stated boundary plus an out-of-scope park, not a guard.",
+      "seeds": [
+        "c31"
+      ]
+    },
+    {
+      "id": "s13",
+      "surface": "challenge pass / reversibility lens: the absence of a delete verb",
+      "finding": "Nothing in the CLI can remove a posted message or attachment, so every write \u2014 including the gated live-test lane's \u2014 is permanent. Confirms the risk raised as q5 during the scope pass rather than leaving it implicit.",
+      "seeds": [
+        "c32"
+      ]
+    },
+    {
+      "id": "s14",
+      "surface": "challenge pass / overlooked-actors lens: issues #13 and #14 as consumers, not just requesters",
+      "finding": "The audience claim names the two repos an always-array 'user get' would break; nothing in the frame obliged anyone to tell them. Neither repo watches this CHANGELOG.",
+      "seeds": [
+        "c30"
+      ]
+    },
+    {
+      "id": "s15",
+      "surface": "challenge pass / data-flow lens: discord.py 2.7.1 before/after naive-datetime handling",
+      "finding": "A naive datetime is interpreted as LOCAL time, so the confirmed 'midnight UTC' reading of a date-only --since holds only if the CLI attaches tzinfo itself.",
+      "seeds": [
+        "c28"
+      ]
+    },
+    {
+      "id": "s16",
+      "surface": "challenge pass / durability lens: discord.py 2.7.1 Attachment attributes",
+      "finding": "url 404s once the message is deleted and proxy_url may last only minutes; whether the CDN URL also carries signed expiry was NOT checked (no live upload made this pass) and is parked unverified rather than asserted.",
+      "seeds": [
+        "c33"
+      ]
+    },
+    {
+      "id": "s17",
+      "surface": "challenge pass / migration lens: persistent state",
+      "finding": "Clean pass \u2014 the CLI holds no persistent store, no schema, and no on-disk state to migrate; the only cross-version compatibility surface is the 'user get' output shape, already routed as c30.",
+      "seeds": []
+    },
+    {
+      "id": "s18",
+      "surface": "challenge pass / concurrency lens: the one-shot transport",
+      "finding": "Clean pass for in-process concurrency \u2014 each verb is a single asyncio.run with one client, no shared mutable state, no locking need. The residual concern is external, not internal: the channel keeps receiving messages while a page walk runs (parked).",
+      "seeds": []
     }
   ],
-  "lapses": [],
+  "lapses": [
+    {
+      "id": "l1",
+      "code": "control-absent",
+      "what": "During the /scope leg I explored 9 candidate surfaces inline instead of fanning out to read-only subagents, which the scope skill requires at 5 or more surfaces. Provenance was unaffected (the main agent ran every move and each finding cites a real file), but the independence the fan-out provides was absent. Filed during the challenge pass, not at the moment it happened \u2014 later than the skill's own 'file it the moment it happens' rule.",
+      "skipped_check": "the scope skill's step-2 rule: 5-or-more candidate surfaces must fan out to one read-only subagent per surface",
+      "refs": [
+        "/scope leg, this session"
+      ],
+      "origin": "llm",
+      "status": "approved"
+    }
+  ],
   "obligations": []
 }
