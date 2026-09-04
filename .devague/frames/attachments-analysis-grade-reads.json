@@ -4,7 +4,7 @@
   "schema_version": 6,
   "status": "exported",
   "created": "2026-09-04T15:28:01Z",
-  "updated": "2026-09-04T16:40:45Z",
+  "updated": "2026-09-04T16:42:22Z",
   "claims": [
     {
       "id": "c1",
@@ -1059,6 +1059,33 @@
       "seam": "explain / learn / overview prose",
       "behavior": "all three self-teaching surfaces describe the shipped flags, including --ids-file in learn's JSON payload",
       "source_text": "The self-teaching surfaces stay true: explain/catalog.py entries, learn.py (_TEXT and _as_json_payload) and overview.py (_VERBS) all describe the new flags.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o12",
+      "claim_id": "c31",
+      "seam": "explain message post / learn output",
+      "behavior": "the CLI itself tells an agent that --file is an unsandboxed local read with no path allow-listing, before it uses the flag",
+      "source_text": "--file performs an unsandboxed local read: any path the invoking process can open is uploaded to a third party. The CLI does not restrict paths, and it is not a confused-deputy guard \u2014 an agent handed a path uploads whatever is there. The operator owns which paths reach the flag.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o13",
+      "claim_id": "c32",
+      "seam": "CLAUDE.md + README live-test prose",
+      "behavior": "the docs state that live tests leave permanent artifacts because there is no delete verb, and must target a sandbox channel",
+      "source_text": "Posting is irreversible on this surface: there is no delete verb, so every message and every attachment this CLI creates \u2014 including live-test artifacts in the sandbox channel \u2014 is permanent as far as this tool is concerned. Removal is a manual Discord action.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o14",
+      "claim_id": "c33",
+      "seam": "explain message post attachments section",
+      "behavior": "the CLI states an attachment URL is a reference that 404s once the message is deleted, not durable storage",
+      "source_text": "An attachment URL returned in --json is a reference, not durable storage: discord.py documents that Attachment.url 404s once the message is deleted, and proxy_url may survive only minutes. Callers must not treat the URL as an archive of the file they uploaded.",
       "origin": "llm",
       "status": "proposed"
     }

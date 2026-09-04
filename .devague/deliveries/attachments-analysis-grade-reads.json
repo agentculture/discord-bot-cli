@@ -2,7 +2,7 @@
   "plan_slug": "attachments-analysis-grade-reads",
   "schema_version": 2,
   "created": "2026-09-04T16:24:10Z",
-  "updated": "2026-09-04T16:41:46Z",
+  "updated": "2026-09-04T16:42:22Z",
   "deviations": [
     {
       "id": "d1",
@@ -242,6 +242,63 @@
       "status": "proposed",
       "superseded": false,
       "seq": 13
+    },
+    {
+      "id": "e12",
+      "obligation_ref": "o12",
+      "test_ref": "manual: discord-bot-cli explain message post; discord-bot-cli learn --json",
+      "behavior_text": "the shipped prose calls --file an unsandboxed local read with no path allow-listing and assigns path responsibility to the operator",
+      "contract_text": "--file performs an unsandboxed local read; the operator owns which paths reach it",
+      "evidence_type": "manual",
+      "strength": "fidelity",
+      "strength_basis": "Read the actual CLI output at the merge gate; 'unsandboxed' is present in both the prose and the JSON payload. No automated test asserts this \u2014 prose accuracy has no instrument here but a human reading.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 14
+    },
+    {
+      "id": "e13",
+      "obligation_ref": "o13",
+      "test_ref": "manual: CLAUDE.md and README.md live-test sections",
+      "behavior_text": "both documents state the no-delete-verb consequence and require a disposable sandbox channel",
+      "contract_text": "posting is irreversible on this surface; live-test artifacts are permanent",
+      "evidence_type": "manual",
+      "strength": "fidelity",
+      "strength_basis": "Read the merged doc text; markdownlint clean. Verified as prose, not behaviour \u2014 nothing enforces that a user actually points the env var at a sandbox.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 15
+    },
+    {
+      "id": "e14",
+      "obligation_ref": "o14",
+      "test_ref": "manual: discord-bot-cli explain message post",
+      "behavior_text": "the attachments section states the url 404s once the message is deleted and must not be treated as durable",
+      "contract_text": "an attachment URL is a reference, not storage",
+      "evidence_type": "manual",
+      "strength": "fidelity",
+      "strength_basis": "Read the shipped catalog prose. NOTE: whether Discord's CDN URLs ALSO carry signed expiry was never checked (frame park v7), so this documented limitation may understate how short-lived the URL is.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 16
     }
   ],
   "deltas": [
