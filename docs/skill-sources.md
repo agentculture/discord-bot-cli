@@ -6,10 +6,15 @@ AgentCulture **skills supplier** after the steward → guildmaster cutover
 (`steward doctor`, the sibling-pattern baseline); only the skills-supplier role
 moved. This file tracks provenance so re-syncs stay deterministic.
 
-Three skills (`think`, `spec-to-plan`, `assign-to-workforce`) originate in
-[`agentculture/devague`](https://github.com/agentculture/devague); guildmaster
-only **re-broadcasts** them. Cite guildmaster's copy; track devague as the true
-origin.
+Eight skills originate in
+[`agentculture/devague`](https://github.com/agentculture/devague) — the
+operator skills for its eight-leg method: `scope`, `think`, `challenge`,
+`spec-to-plan`, `assign-to-workforce`, `deviate`, `validate-delivery`,
+`summarize-delivery`. Guildmaster only **re-broadcasts** them, so devague is
+the true origin in every case. Three of them (`think`, `spec-to-plan`,
+`assign-to-workforce`) are vendored here via guildmaster's copy; the other five
+are vendored **directly from devague** — see *Upstream choice for the devague
+skills*, below.
 
 Every vendored `SKILL.md` carries `type: command`. discord-bot-cli
 declares a culture agent (`culture.yaml`, `backend: claude`), and
@@ -29,6 +34,11 @@ is load-bearing, even where guildmaster's upstream copy omits it.
 | `think` | `../guildmaster/.claude/skills/think/` | **devague** (re-broadcast via guildmaster) | idea→spec leg of the devague workflow chain. Verbatim (already carried `type: command` at guildmaster). Origin/broadcast prose left verbatim. | 2026-05-26 (guildmaster 0.6.0) |
 | `spec-to-plan` | `../guildmaster/.claude/skills/spec-to-plan/` | **devague** (re-broadcast via guildmaster) | spec→plan leg of the devague workflow chain. Verbatim (already carried `type: command`). | 2026-05-26 (guildmaster 0.6.0) |
 | `assign-to-workforce` | `../guildmaster/.claude/skills/assign-to-workforce/` | **devague** (re-broadcast via guildmaster) | plan→parallel-implementation leg of the devague workflow chain. Verbatim (already carried `type: command`). | 2026-05-26 (guildmaster 0.6.0) |
+| `scope` | `../devague/.claude/skills/scope/` | **devague** (vendored direct) | idea→scope leg — the optional opening move ahead of `/think`. Method-only: `SKILL.md` alone, no `scripts/` resolver — the skill invokes the `devague` CLI directly. Byte-verbatim (already carried `type: command`). | 2026-09-04 (devague 0.24.1) |
+| `challenge` | `../devague/.claude/skills/challenge/` | **devague** (vendored direct) | spec blind-spot pass, between `/think` and `/spec-to-plan`. Method-only: `SKILL.md` alone, no `scripts/` resolver — the skill invokes the `devague` CLI directly. Byte-verbatim (already carried `type: command`). | 2026-09-04 (devague 0.24.1) |
+| `deviate` | `../devague/.claude/skills/deviate/` | **devague** (vendored direct) | execution-time leg: records human-approved departures from the confirmed plan. Method-only: `SKILL.md` alone, no `scripts/` resolver — the skill invokes the `devague` CLI directly. Byte-verbatim (already carried `type: command`). | 2026-09-04 (devague 0.24.1) |
+| `validate-delivery` | `../devague/.claude/skills/validate-delivery/` | **devague** (vendored direct) | post-merge leg: runs the plan's behavioral tests agent-side and files evidence + behavioral deltas. Method-only: `SKILL.md` alone, no `scripts/` resolver — the skill invokes the `devague` CLI directly. Byte-verbatim (already carried `type: command`). | 2026-09-04 (devague 0.24.1) |
+| `summarize-delivery` | `../devague/.claude/skills/summarize-delivery/` | **devague** (vendored direct) | closing leg: planned-versus-actual accountability artifact. Method-only: `SKILL.md` alone, no `scripts/` resolver — the skill invokes the `devague` CLI directly. Byte-verbatim (already carried `type: command`). | 2026-09-04 (devague 0.24.1) |
 
 ## Re-sync procedure
 
@@ -42,6 +52,12 @@ done
 rm -rf .claude/skills/<skill>
 cp -R ../guildmaster/.claude/skills/<skill> .claude/skills/
 
+# ...except the five devague-direct skills, which re-sync from the origin
+# (see "Upstream choice for the devague skills"):
+for s in scope challenge deviate validate-delivery summarize-delivery; do
+  rm -rf ".claude/skills/$s" && cp -R "../devague/.claude/skills/$s" .claude/skills/
+done
+
 # Re-apply the identifier-only adaptations in SKILL.md:
 #   - consumer-identifying prose: `guildmaster` → `discord-bot-cli` (NOT
 #     where it cites guildmaster/steward/devague as the upstream/origin).
@@ -54,6 +70,33 @@ cp -R ../guildmaster/.claude/skills/<skill> .claude/skills/
 If a re-sync would lose a discord-bot-cli adaptation, lift the change
 upstream into guildmaster first (per guildmaster's `docs/skill-sources.md`) and
 re-vendor.
+
+### Upstream choice for the devague skills (2026-09-04)
+
+The five skills added on 2026-09-04 are vendored **straight from
+`../devague/`**, not from guildmaster's re-broadcast, because guildmaster's
+copies were materially stale at the time: they described devague's older
+**six-leg** flow (`scope → think → spec-to-plan → assign-to-workforce →
+deviate → summarize-delivery`), omitted the `challenge` and `validate-delivery`
+legs from that chain, and `scope/SKILL.md` lacked the subagent fan-out rule
+(4-or-fewer inline, 5-or-more fan out) that devague 0.24.1 ships. Guildmaster
+carried no `validate-delivery` skill at all.
+
+Vendoring from the origin is sanctioned by these skills' own provenance
+sections — devague authors them and is *never* re-vendored back from
+guildmaster's copy. Re-sync them from `../devague/`, not `../guildmaster/`,
+unless and until guildmaster's broadcast catches up; the earlier three
+(`think`, `spec-to-plan`, `assign-to-workforce`) still track guildmaster, so
+this repo intentionally pulls the devague family from two upstreams. Folding
+all eight onto one upstream is the cleanup to make once guildmaster
+re-broadcasts current copies.
+
+`.pr_agent.toml` came from the same pull (`../devague/.pr_agent.toml`). It is
+not a skill, so it has no table row: it is the Qodo/PR-Agent reviewer config
+holding the condensed form of `devague learn review` — the ledger-audit rules
+(three-way evidence comparison, evidence-strength ceilings, deltas audited in
+both directions). Vendored verbatim except its first comment line, which names
+the consuming repo.
 
 ### Local divergence — `agex` → `devex` rename (2026-05-30)
 
