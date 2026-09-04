@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import datetime
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from discord_bot_cli.cli import main
+from discord_bot_cli.cli._commands.channel import _message_dict
 from tests.conftest import FakeClient, FakeMessage, FakeUser
 
 _WINDOW_EPOCH = datetime.datetime(2026, 6, 18, 12, 0, 0, tzinfo=datetime.timezone.utc)
@@ -40,6 +42,47 @@ def test_channel_messages_oldest_first(
     assert [m["content"] for m in payload["messages"]] == ["first", "second", "third"]
     assert ("fetch_channel", 555) in fake_discord.calls
     assert ("history", 3) in fake_discord.channel.calls
+
+
+def test_channel_messages_author_includes_bot_and_global_name(
+    fake_discord: FakeClient, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Give one of the stock authors a global_name/bot so both fields are
+    # exercised as non-default values, not just the FakeUser defaults.
+    fake_discord.channel.history_messages[0].author.global_name = "Carol Danvers"
+    fake_discord.channel.history_messages[0].author.bot = True
+
+    rc = main(["channel", "messages", "555", "--limit", "3", "--json"])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    by_content = {m["content"]: m for m in payload["messages"]}
+    assert by_content["third"]["author"]["global_name"] == "Carol Danvers"
+    assert by_content["third"]["author"]["bot"] is True
+    # Existing fields untouched, and the default authors report false/None.
+    assert by_content["second"]["author"]["bot"] is False
+    assert by_content["second"]["author"]["global_name"] is None
+    assert by_content["second"]["author"]["id"] == "10"
+    assert by_content["second"]["author"]["name"] == "bob"
+
+
+def test_channel_messages_author_fields_cost_no_extra_fetch_user_call(
+    fake_discord: FakeClient, capsys: pytest.CaptureFixture[str]
+) -> None:
+    rc = main(["channel", "messages", "555", "--limit", "3", "--json"])
+    assert rc == 0
+    capsys.readouterr()
+    assert not any(name == "fetch_user" for name, *_ in fake_discord.calls)
+
+
+def test_message_dict_author_without_global_name_defaults_to_none() -> None:
+    # A stubbed author missing the ``global_name`` attribute entirely (not
+    # even set to None) must not raise — matching the module's getattr-default
+    # style used elsewhere.
+    author = SimpleNamespace(id=99, name="nouser", bot=True)
+    message = FakeMessage(42, author=author, content="hi")
+    result = _message_dict(message)
+    assert result["author"]["global_name"] is None
+    assert result["author"]["bot"] is True
 
 
 def test_channel_messages_limit_out_of_range(
