@@ -5,7 +5,7 @@
   "schema_version": 5,
   "status": "exported",
   "created": "2026-09-04T16:03:33Z",
-  "updated": "2026-09-04T16:09:55Z",
+  "updated": "2026-09-04T16:10:57Z",
   "targets": [
     {
       "id": "c1",
@@ -810,11 +810,11 @@
     },
     {
       "id": "r4",
-      "text": "The live paging test (t12) needs a sandbox channel holding more than 100 messages inside the test window. #spark-tests may not have that history, in which case the test proves nothing while appearing to pass. Confirm the channel's message count before relying on that lane for c25/h27.",
+      "text": "The live paging test (t11) needs a sandbox channel holding more than 100 messages inside the test window. #spark-tests may not have that history, in which case the test proves nothing while appearing to pass. Confirm the channel's message count before relying on that lane for c25/h27.",
       "kind": "unknown_nonblocking",
       "task_id": "t12",
-      "resolved": false,
-      "resolution": ""
+      "resolved": true,
+      "resolution": "Superseded by r7: this risk was attached to t12 (the release task) by a numbering slip; it belongs on t11, the live-lane task. Re-filed there with identical content."
     },
     {
       "id": "r5",
@@ -829,6 +829,14 @@
       "text": "Whether Discord's CDN attachment URLs carry signed expiry parameters was NOT checked during the challenge pass (frame park v7). If they do, the --json URLs are shorter-lived than c33's '404s once the message is deleted' wording implies, and t10's documentation would understate it.",
       "kind": "unknown_nonblocking",
       "task_id": "t10",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r7",
+      "text": "The live paging test needs a sandbox channel holding more than 100 messages inside the test window. #spark-tests may not have that history, in which case the test proves nothing while appearing to pass. Confirm the channel's message count before relying on that lane for c25/h27.",
+      "kind": "unknown_nonblocking",
+      "task_id": "t11",
       "resolved": false,
       "resolution": ""
     }
