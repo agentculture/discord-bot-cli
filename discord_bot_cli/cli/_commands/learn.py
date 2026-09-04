@@ -106,9 +106,7 @@ def _as_json_payload() -> dict[str, object]:
             },
             {
                 "path": ["message", "reply"],
-                "summary": (
-                    "Reply to a message; same optional content / --file rule as " "message post."
-                ),
+                "summary": "Reply to a message; same content/--file rule as message post.",
             },
             {"path": ["message", "react"], "summary": "Add a reaction to a message."},
             {"path": ["thread", "create"], "summary": "Create a thread (anchored or standalone)."},

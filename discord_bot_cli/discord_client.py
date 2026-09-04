@@ -167,9 +167,7 @@ async def _run_async[T](
             sent = f" (sent {_format_bytes(upload_bytes)})" if upload_bytes is not None else ""
             raise CliError(
                 code=EXIT_USER_ERROR,
-                message=(
-                    f"Discord rejected the upload as too large (413){sent}: " f"{_http_text(exc)}"
-                ),
+                message=f"Discord rejected the upload as too large (413){sent}: {_http_text(exc)}",
                 remediation=(
                     "the per-file size limit depends on this guild's boost tier, not a "
                     "fixed size — resend a smaller file, or split/compress it"
