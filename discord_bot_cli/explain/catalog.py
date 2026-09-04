@@ -194,7 +194,10 @@ driven by other agents over the mesh, so which paths reach `--file` is the
 operator's responsibility, not this CLI's. `--json` on `post`/`reply` adds an
 `attachments` list, one entry per file: `{"id", "filename", "url", "size"}`.
 That `url` is a **reference, not storage** — discord.py documents that it
-404s once the message is deleted, so don't treat it as durable.
+a **signed CDN link carrying `?ex=` (expiry), `&is=` (issued) and `&hm=`
+(signature) parameters — measured at ~24h of validity — and it 404s outright
+once the message is deleted. Re-fetch the message to get a fresh URL; never
+store one and expect it to keep resolving.
 
 ## Usage
 

@@ -51,7 +51,9 @@ Notes on the flags above
     this process can open is uploaded to Discord, with no path allow-listing.
     content may be omitted only if at least one --file is given. --json adds
     an "attachments" list ({id, filename, url, size}); the url is a
-    REFERENCE, NOT STORAGE — it 404s once the message is deleted.
+    REFERENCE, NOT STORAGE — it is a signed CDN link that expires about 24h
+    after it is issued (the ?ex=/&is=/&hm= parameters), and 404s outright
+    once the message is deleted.
   user get --json ALWAYS emits an array, even for one id (breaking change in
     0.6.0 from the prior single-object payload). A bad id becomes an
     {id, error, remediation} entry in place rather than failing the batch.
@@ -143,7 +145,10 @@ def _as_json_payload() -> dict[str, object]:
                 "unsandboxed local read: any path the process can open is "
                 "uploaded to Discord, with no path allow-listing"
             ),
-            "attachment_url": "a reference, not storage — 404s once the message is deleted",
+            "attachment_url": (
+                "a reference, not storage — a signed CDN link that expires ~24h "
+                "after issue, and 404s once the message is deleted"
+            ),
             "user_get_json_shape": (
                 "always an array, even for a single id (breaking change in 0.6.0 "
                 "from the prior single-object payload)"

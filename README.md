@@ -89,7 +89,8 @@ tell a truncated scan from a complete one rather than guessing. Two things to
 know before reaching for `--file`: it is an **unsandboxed local read** (any path
 the process can open is uploaded to Discord — the operator owns which paths
 reach it), and the returned attachment `url` is a **reference, not storage**: it
-404s once the message is deleted.
+a signed CDN link that expires roughly 24h after it is issued, and 404s
+outright once the message is deleted — re-fetch the message for a fresh one.
 
 > The runtime package itself stays dependency-free — `discord.py` is imported
 > lazily inside the verb handlers, so a plain install never pulls it in.

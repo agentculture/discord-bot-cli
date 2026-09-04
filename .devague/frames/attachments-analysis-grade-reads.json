@@ -4,7 +4,7 @@
   "schema_version": 6,
   "status": "exported",
   "created": "2026-09-04T15:28:01Z",
-  "updated": "2026-09-04T16:42:22Z",
+  "updated": "2026-09-04T17:20:39Z",
   "claims": [
     {
       "id": "c1",
@@ -781,9 +781,9 @@
       "text": "Whether Discord's CDN attachment URLs returned in --json carry signed expiry parameters on this API version \u2014 discord.py 2.7.1's Attachment.url docstring documents 404-on-delete but says nothing about signed expiry, and this pass did not make a live upload to check. Unverified either way.",
       "kind": "unknown_nonblocking",
       "claim_id": "c33",
-      "resolved": false,
-      "resolution": "",
-      "resolution_claim_id": null
+      "resolved": true,
+      "resolution": "ANSWERED LIVE (2026-09-04): Discord CDN attachment URLs DO carry signed expiry parameters \u2014 ?ex= (expiry), &is= (issued), &hm= (signature). Measured lifetime is exactly 24h (issued 2026-09-04T17:19:45Z, expires 2026-09-05T17:19:45Z) on a real upload to the sandbox channel. So c33's shipped wording ('404s once the message is deleted') UNDERSTATED the limitation: the URL also expires on its own while the message still exists. explain/catalog.py, learn.py (_TEXT and _as_json_payload) and README.md were corrected to say so.",
+      "resolution_claim_id": "c33"
     },
     {
       "id": "v8",

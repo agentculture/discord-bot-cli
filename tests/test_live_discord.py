@@ -102,8 +102,10 @@ def _run(args: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict
 def test_live_user_get(capsys: pytest.CaptureFixture[str]) -> None:
     rc, payload = _run(["user", "get", _USER], capsys)
     assert rc == 0, payload
-    assert payload["id"] == _USER
-    assert "username" in payload
+    # 0.6.0: --json is ALWAYS an array, even for a single id.
+    assert isinstance(payload, list) and len(payload) == 1, payload
+    assert payload[0]["id"] == _USER
+    assert "username" in payload[0]
 
 
 @_needs_guild

@@ -5,7 +5,7 @@
   "schema_version": 5,
   "status": "exported",
   "created": "2026-09-04T16:03:33Z",
-  "updated": "2026-09-04T16:34:03Z",
+  "updated": "2026-09-04T17:20:39Z",
   "targets": [
     {
       "id": "c1",
@@ -829,24 +829,24 @@
       "text": "Whether Discord's CDN attachment URLs carry signed expiry parameters was NOT checked during the challenge pass (frame park v7). If they do, the --json URLs are shorter-lived than c33's '404s once the message is deleted' wording implies, and t10's documentation would understate it.",
       "kind": "unknown_nonblocking",
       "task_id": "t10",
-      "resolved": false,
-      "resolution": ""
+      "resolved": true,
+      "resolution": "Closed by the same live run that resolved frame park v7: the URLs DO carry signed expiry (~24h). The documentation understated it and has been corrected in catalog.py, learn.py and README.md."
     },
     {
       "id": "r7",
       "text": "The live paging test needs a sandbox channel holding more than 100 messages inside the test window. #spark-tests may not have that history, in which case the test proves nothing while appearing to pass. Confirm the channel's message count before relying on that lane for c25/h27.",
       "kind": "unknown_nonblocking",
       "task_id": "t11",
-      "resolved": false,
-      "resolution": ""
+      "resolved": true,
+      "resolution": "Closed. #spark-tests holds 123 messages in a 3650d window \u2014 above the >100 precondition \u2014 and test_live_channel_messages_pages_past_100 passed against real Discord. The paging test was genuinely exercised, not vacuously green."
     },
     {
       "id": "r8",
       "text": "The test fakes' send()/reply() do not echo the files they receive back into the returned message's .attachments \u2014 realistic, since real Discord only populates that after the HTTP round trip. So the '--json includes attachment ids and URLs' behaviour (c14/h3) is proven by construction (attachments_payload reads message.attachments verbatim) plus one monkeypatched round-trip simulation, NOT by an end-to-end stubbed assertion. Both t4 and t5 independently hit this. Only the live lane can close it, which raises the stakes on t11.",
       "kind": "unknown_nonblocking",
       "task_id": "t11",
-      "resolved": false,
-      "resolution": ""
+      "resolved": true,
+      "resolution": "Closed. test_live_message_post_with_file_upload passed against real Discord, and a manual upload returned a real attachment id (1545483523270377482), a working CDN url and size=39. Attachment ids and URLs are now proven end to end, not merely by construction."
     },
     {
       "id": "r9",
