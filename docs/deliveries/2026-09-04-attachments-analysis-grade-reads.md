@@ -42,7 +42,7 @@ Quoted verbatim from the `devague summary` skeleton:
 | `t6` | delivered | `--since` window, paging past 100, `window` coverage signal, ordering fixed; merge `fdc6932` |
 | `t7` | delivered | Batch `user get` (varargs + `--ids-file`), always-array, exit 0 on per-id failure; merge `06569f7` |
 | `t8` | delivered | `author.bot` + `author.global_name` with no extra `fetch_user`; merge `819ad65` |
-| `t9` | delivered | 413 mapped with a boost-tier remediation. The sent byte size is NOT named — impossible, not omitted; `d2` **approved**, delta `b7` filed; merge `cc51eee` |
+| `t9` | delivered | 413 mapped with a boost-tier remediation **and the byte size sent**. `d2` was approved recording that the size was unreachable; the gap was then **closed** by threading the already-read size from `_attachments.upload_bytes` into `run()` (delta `b8` supersedes `b7`); merge `cc51eee` + follow-up |
 | `t10` | delivered | catalog/learn/overview updated; one gap (`--ids-file` absent from learn's JSON) caught and fixed at the gate; merge `1a22f62` |
 | `t11` | delivered | Live upload + paging tests, doubly gated, `pytest.fail` on a thin channel; merge `189e073`. **All 7 live tests since run and passing against real Discord**, after fixing a stale pre-0.6.0 assertion in `test_live_user_get` that only the live lane could catch |
 | `t12` | delivered | 0.6.0 in pyproject + CHANGELOG (BREAKING called out) + README |
@@ -60,7 +60,7 @@ Quoted verbatim from the `devague summary` skeleton:
 | Plan item | Reason for divergence | Classification |
 |-----------|-----------------------|----------------|
 | `t7` (`d1`) | t7's confirmed scope omitted `tests/test_discord_integration.py`, whose assertion encoded the old single-object shape that the approved breaking change invalidates | acceptable |
-| `t9` (`d2`) | The 413 error cannot name the byte size sent — discord.py's `HTTPException` never records it, and the q2 no-pre-flight decision means no earlier layer captured it either. Discord's own text is surfaced rather than a fabricated number | acceptable |
+| `t9` (`d2`) | The 413 error could not name the byte size sent — discord.py's `HTTPException` never records it. **Since resolved**: the size is now threaded down from the verb that already read it, so the original criterion is met. `d2` stands as the record of the intermediate state | acceptable |
 | `t13` | Not executed: outward-facing publication to two other repos, gated on an approval that was scoped into the split plan and not yet given | needs-follow-up |
 
 ## Evidence
@@ -95,7 +95,7 @@ Quoted verbatim from the `devague summary` skeleton:
 | `author.bot` and `author.global_name` ship with no extra `fetch_user` call | high | `e5` · `test_channel_messages_author_fields_cost_no_extra_fetch_user_call` |
 | `user get` resolves a batch in one login, always emits an array, exits 0 on per-id failure, preserves input order | high | `e6` · `tests/test_discord_user.py` · merge `06569f7` |
 | Zero runtime dependencies is unchanged | high | `e7` · `tests/test_no_runtime_deps.py` passing **unmodified** |
-| A 413 maps to the CLI error contract with a boost-tier remediation | medium | `e10` — passes. Does not name the byte size the criterion asked for; `d2` approved, `b7` filed. Never exercised against a real oversized upload |
+| A 413 maps to the CLI error contract, naming the boost-tier dependence **and the byte size sent** | medium | `e18` — supersedes `e10`. Size threaded from `_attachments.upload_bytes`; nothing gates on it, asserted by `test_upload_bytes_is_reported_not_gated`. Still never exercised against a **real** oversized upload, which is why this is not `high` |
 | `explain`/`learn`/`overview` describe the shipped surface | medium | `e11` — fidelity only; **no automated test asserts prose accuracy**, which is how the missing `--ids-file` entry was caught by hand |
 | `--file` is documented as an unsandboxed local read | medium | `e12` · `explain message post`, `learn --json` |
 | Live-test artifacts are documented as permanent | medium | `e13` · CLAUDE.md, README.md |
@@ -114,9 +114,9 @@ in the *completeness* of the scope survey, not in any individual finding.
 ## Remaining Work / Follow-up
 
 - `t13` — **blocked.** Post the 0.6.0 breaking-change notice to issues #13 and #14 via the `communicate` skill. Needs the user's explicit OK, as scoped in the approved split plan. Owner: user decision, then main agent.
-- 17 evidence records, 14 obligations and 7 deltas are `proposed` and await `--confirm`/`--reject`. (`d1` and `d2` are both approved; `l1` is approved.)
+- 18 evidence records, 14 obligations and 8 deltas are `proposed` and await `--confirm`/`--reject`. (`d1` and `d2` are approved; `l1` is approved; `b7` is superseded by `b8`.)
 - `r9` — `DISCORD_TEST_PAGING_SINCE` is not wired into `.github/workflows/live-tests.yml`, so the paging test self-skips in CI even though it passes locally. No task owned that workflow file.
-- The 413 path has never been exercised against a **real** oversized upload — only a synthesised `HTTPException`. Sending a file over the guild's cap would raise `e10` to execution strength.
+- The 413 path has never been exercised against a **real** oversized upload — only a synthesised `HTTPException`. Sending a file over the guild's cap is the only thing that would make `e18` fully trustworthy.
 - `v6` — the scan window moves while it pages; whether the coverage signal should account for that, or close the window at a fixed upper bound taken at start, is undecided.
 - Open frame parks `v2` (`--before` scope) and `v3` (per-guild `nick`) remain deliberately deferred.
 - The `m` = months (30-day) duration unit is a judgement call that shipped; dropping `m` or renaming it `mo` is a one-line change in `_timewindow.py`.

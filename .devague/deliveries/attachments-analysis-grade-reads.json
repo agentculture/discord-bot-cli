@@ -2,7 +2,7 @@
   "plan_slug": "attachments-analysis-grade-reads",
   "schema_version": 2,
   "created": "2026-09-04T16:24:10Z",
-  "updated": "2026-09-04T17:49:26Z",
+  "updated": "2026-09-04T17:52:49Z",
   "deviations": [
     {
       "id": "d1",
@@ -356,6 +356,25 @@
       "status": "proposed",
       "superseded": false,
       "seq": 19
+    },
+    {
+      "id": "e18",
+      "obligation_ref": "o10",
+      "test_ref": "tests/test_discord_client.py::test_413_names_the_byte_size_when_the_caller_supplies_it, ::test_413_never_invents_a_size_when_none_was_supplied, ::test_upload_bytes_is_reported_not_gated; tests/test_discord_message.py::test_post_with_files_passes_upload_bytes_to_the_transport",
+      "behavior_text": "the 413 error names the byte size actually sent, invents nothing when no size is available, and never gates the request on the number",
+      "contract_text": "an HTTPException with status 413 becomes a CliError naming the byte size that was sent",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "The original criterion is now MET, not deviated from: the size is threaded from _attachments.upload_bytes (reading paths already stat'd for readability) into discord_client.run. Supersedes e10's partial outcome. Still not exercised against a real oversized upload.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T20:52:48+03:00",
+        "commit": "9283f91"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 20
     }
   ],
   "deltas": [
@@ -453,8 +472,30 @@
       ],
       "origin": "llm",
       "status": "proposed",
+      "superseded": true
+    },
+    {
+      "id": "b8",
+      "kind": "amended",
+      "behavior_text": "The 413 error NOW names the byte size that was sent \u2014 'Discord rejected the upload as too large (413) (sent 11.44 MB)'. This reverses b7: the gap d2 recorded was closed by threading the already-read size down from the verb, rather than accepted.",
+      "caused_by": [
+        "d2"
+      ],
+      "evidence_refs": [
+        "e18"
+      ],
+      "origin": "llm",
+      "status": "proposed",
       "superseded": false
     }
   ],
-  "supersessions": []
+  "supersessions": [
+    {
+      "id": "s1",
+      "action": "supersede",
+      "target_ref": "b7",
+      "replacement_ref": "b8",
+      "origin": "user"
+    }
+  ]
 }
