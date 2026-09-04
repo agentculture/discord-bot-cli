@@ -2,7 +2,7 @@
   "plan_slug": "attachments-analysis-grade-reads",
   "schema_version": 2,
   "created": "2026-09-04T16:24:10Z",
-  "updated": "2026-09-04T16:29:24Z",
+  "updated": "2026-09-04T16:41:46Z",
   "deviations": [
     {
       "id": "d1",
@@ -33,7 +33,286 @@
       "seq": 2
     }
   ],
-  "evidence": [],
-  "deltas": [],
+  "evidence": [
+    {
+      "id": "e1",
+      "obligation_ref": "o1",
+      "test_ref": "tests/test_discord_message.py + tests/test_discord_thread.py (--file cases); tests/test_attachments.py::test_add_file_flag_repeatable_and_order_preserving",
+      "behavior_text": "multi-file post lands in one send in argument order; file-only post succeeds; the plain positional form still parses",
+      "contract_text": "--file is repeatable and order-preserving; content optional once a file is given",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran the full suite green at the named commit; the repo has no behavioral marker or tests/behavioral folder, so these are ordinary pytest node ids exercising the stubbed discord_client.run seam",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 3
+    },
+    {
+      "id": "e2",
+      "obligation_ref": "o2",
+      "test_ref": "tests/test_attachments.py::test_build_files_missing_path_raises_cli_error_before_login, ::test_build_files_directory_path_raises_cli_error, ::test_build_files_eleventh_path_raises_cli_error_naming_limit",
+      "behavior_text": "a bad path and an 11th file each raise CliError with a remediation before any login",
+      "contract_text": "attachment failures route through the CliError contract, no traceback",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran green at the named commit; the guard sits ahead of the transport precisely because OSError and builtin ValueError are not discord.* subclasses and discord_client.run would not map them",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 4
+    },
+    {
+      "id": "e3",
+      "obligation_ref": "o3",
+      "test_ref": "tests/test_attachments.py::test_attachments_payload_maps_fields; tests/test_discord_message.py (--json attachments case, monkeypatched round trip)",
+      "behavior_text": "message.attachments maps to [{id, filename, url, size}] under the key 'attachments'",
+      "contract_text": "--json includes the resulting attachment ids and URLs",
+      "evidence_type": "automated",
+      "strength": "fidelity",
+      "strength_basis": "DELIBERATELY NOT execution-strength end to end: the stubbed fakes do not echo uploaded files back into message.attachments (real Discord only populates it after the HTTP round trip), so the mapping is asserted but a REAL id/URL is never returned in the stubbed lane. See risk r8. Only the gated live test test_live_message_post_with_file_upload can raise this rung, and it has not been run.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 5
+    },
+    {
+      "id": "e4",
+      "obligation_ref": "o4",
+      "test_ref": "tests/test_discord_channel.py::test_limit_caps_a_windowed_walk_and_json_says_so, ::test_window_signal_present_when_fully_covered, ::test_window_signal_present_on_a_non_windowed_read",
+      "behavior_text": "a windowed walk pages past 100, --limit caps it, and the window signal is present on every --json run naming what stopped the walk",
+      "contract_text": "channel messages gains a time window that pages past the cap, with an explicit coverage signal",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran green at the named commit against the stubbed seam. NOTE: paging past 100 is proven against a fake that reproduces discord.py's iterator contract, not against real REST \u2014 the live proof is gated and unrun (risks r7, r9)",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 6
+    },
+    {
+      "id": "e5",
+      "obligation_ref": "o5",
+      "test_ref": "tests/test_discord_channel.py::test_channel_messages_author_includes_bot_and_global_name, ::test_channel_messages_author_fields_cost_no_extra_fetch_user_call",
+      "behavior_text": "author.bot and author.global_name are present and cost no extra fetch_user call",
+      "contract_text": "_message_dict gains author.bot and author.global_name",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran green at the named commit; the no-extra-round-trip half is asserted by checking no fetch_user call was recorded on the fake",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 7
+    },
+    {
+      "id": "e6",
+      "obligation_ref": "o6",
+      "test_ref": "tests/test_discord_user.py (batch, --ids-file, always-array, per-id failure, input-order cases); tests/test_discord_integration.py::test_full_compose_flow",
+      "behavior_text": "many ids resolve in one session in input order, --json is always an array, a failed id yields an error entry and the exit code stays 0",
+      "contract_text": "user get gains a tolerant batch form emitting a JSON array",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran green at the named commit; the always-array break was also proven by the integration test needing its assertion updated, recorded as deviation d1",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 8
+    },
+    {
+      "id": "e7",
+      "obligation_ref": "o7",
+      "test_ref": "tests/test_no_runtime_deps.py",
+      "behavior_text": "dependencies == [] and no top-level third-party import anywhere in the package",
+      "contract_text": "zero runtime dependencies is unchanged",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran green UNMODIFIED at the named commit, which is the point: the constraint is proven by an untouched pre-existing test rather than one written alongside the new code",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 9
+    },
+    {
+      "id": "e8",
+      "obligation_ref": "o8",
+      "test_ref": "tests/test_discord_channel.py::test_windowed_and_plain_reads_are_both_oldest_first; tests/test_conftest_fakes.py::test_history_with_after_flips_default_to_oldest_first",
+      "behavior_text": "output is oldest-first on BOTH the windowed and plain paths, and oldest_first is passed explicitly on every history call",
+      "contract_text": "channel messages emits oldest-first regardless of read mode",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran green at the named commit AND independently re-verified by the merge gate: I drove the CLI end to end on both paths and read the actual message order, rather than trusting the task agent's own tests. The fake reproduces discord.py's default-flip verbatim, so a wrong implementation fails rather than passes.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 10
+    },
+    {
+      "id": "e9",
+      "obligation_ref": "o9",
+      "test_ref": "tests/test_timewindow.py (forced-TZ cases)",
+      "behavior_text": "every accepted --since form returns a tz-aware UTC instant, identical under any host TZ",
+      "contract_text": "--since resolves to an aware UTC instant, per the q3 decision",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran green at the named commit AND independently re-verified at the merge gate by calling parse_since under TZ=UTC, America/New_York and Asia/Kolkata and comparing instants \u2014 the agent's own forced-TZ test could have been wrong in the same direction as its implementation",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 11
+    },
+    {
+      "id": "e10",
+      "obligation_ref": "o10",
+      "test_ref": "tests/test_discord_client.py::test_run_maps_413_to_cli_error_naming_discord_message, ::test_413_remediation_names_boost_tier_not_a_fixed_limit, ::test_413_stderr_shape_and_exit_code",
+      "behavior_text": "a 413 maps to CliError with a boost-tier remediation, exit 1, error:/hint: stderr shape",
+      "contract_text": "attachment size failures surface through the CLI error contract",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "ran green at the named commit. Partial against the original criterion: the byte size sent is NOT named, because discord.py's HTTPException never records it \u2014 see deviation d2 (proposed)",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 12
+    },
+    {
+      "id": "e11",
+      "obligation_ref": "o11",
+      "test_ref": "manual CLI invocation: discord-bot-cli learn, learn --json, overview, explain message post, explain user get, explain channel messages",
+      "behavior_text": "all three self-teaching surfaces describe the shipped flags",
+      "contract_text": "explain/learn/overview stay true to the shipped surface",
+      "evidence_type": "automated",
+      "strength": "fidelity",
+      "strength_basis": "NOT execution-strength: no automated test asserts this prose \u2014 test_every_catalog_path_resolves checks paths, not accuracy. Verified by running the CLI and reading the output at the merge gate, which is how the missing --ids-file entry in learn's JSON payload was caught and fixed. A human reading is the only instrument here.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T19:40:30+03:00",
+        "commit": "4f4882a"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 13
+    }
+  ],
+  "deltas": [
+    {
+      "id": "b1",
+      "kind": "added",
+      "behavior_text": "channel messages reports stopped_by='limit' when the collected count lands EXACTLY on --limit, even if the window happened to end there. The API cannot distinguish the two, so the pessimistic reading was chosen: a spurious 'come back for more' over a false 'you have everything'. The plan did not specify this boundary case.",
+      "caused_by": [
+        "c15"
+      ],
+      "evidence_refs": [
+        "e4"
+      ],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b2",
+      "kind": "added",
+      "behavior_text": "--since accepts a duration suffix 'm' meaning MONTHS, approximated as 30 days (units h/d/w/m). The plan left the unit set open; months was chosen over minutes and the approximation is documented in the module docstring and named in the error hint.",
+      "caused_by": [
+        "c28"
+      ],
+      "evidence_refs": [
+        "e9"
+      ],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b3",
+      "kind": "added",
+      "behavior_text": "--since REJECTS a bare naive timestamp such as '2026-06-01T12:00:00' as ambiguous rather than assuming a timezone. The plan named three accepted forms but did not say what happens to a fourth; refusing is the honest choice given discord.py reads a naive datetime as local time.",
+      "caused_by": [
+        "c28"
+      ],
+      "evidence_refs": [
+        "e9"
+      ],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b4",
+      "kind": "added",
+      "behavior_text": "channel messages emits a stderr diagnostic in text mode when --limit cut a windowed walk short. The plan specified the --json coverage signal only; text-mode users would otherwise get a silently truncated read with no signal at all.",
+      "caused_by": [
+        "c15"
+      ],
+      "evidence_refs": [
+        "e4"
+      ],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b5",
+      "kind": "added",
+      "behavior_text": "The live lane gained a DISCORD_TEST_PAGING_SINCE env var, and its paging test calls pytest.fail (not skip) when the window holds <= 100 messages. The plan asked for a paging test but did not specify how to prevent it passing vacuously on a thin channel.",
+      "caused_by": [
+        "c25"
+      ],
+      "evidence_refs": [],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    }
+  ],
   "supersessions": []
 }

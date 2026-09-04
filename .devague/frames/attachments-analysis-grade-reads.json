@@ -4,7 +4,7 @@
   "schema_version": 6,
   "status": "exported",
   "created": "2026-09-04T15:28:01Z",
-  "updated": "2026-09-04T15:57:58Z",
+  "updated": "2026-09-04T16:40:45Z",
   "claims": [
     {
       "id": "c1",
@@ -962,5 +962,105 @@
       "status": "approved"
     }
   ],
-  "obligations": []
+  "obligations": [
+    {
+      "id": "o1",
+      "claim_id": "c12",
+      "seam": "message post / message reply / thread post argparse + send",
+      "behavior": "a repeatable, order-preserving --file attaches every file to ONE send, and content is optional once at least one file is given",
+      "source_text": "'message post', 'message reply' and 'thread post' accept a repeatable, order-preserving --file PATH; the positional content becomes optional once at least one --file is given (an attachment-only message is valid on Discord).",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o2",
+      "claim_id": "c13",
+      "seam": "_attachments guard ahead of the transport",
+      "behavior": "a missing/unreadable/directory path and an 11th file each raise CliError with a remediation before login; no OSError or builtin ValueError escapes",
+      "source_text": "Attachment failures route through the CliError contract: an unreadable or missing path fails before login, more than 10 files is rejected client-side, and a Discord 413 (size) is mapped to a typed error naming the size sent \u2014 each exits 1 with a remediation and no traceback reaches stderr.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o3",
+      "claim_id": "c14",
+      "seam": "the --json attachments payload on post/reply/thread post",
+      "behavior": "the created message's attachments are reported as [{id, filename, url, size}] under the key 'attachments'",
+      "source_text": "--json on post/reply/thread-post includes the resulting attachment ids and URLs alongside the message id, so a caller can reference what it uploaded.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o4",
+      "claim_id": "c15",
+      "seam": "channel messages --since window walk and coverage signal",
+      "behavior": "a window pages past the 100-message cap, --limit caps it as a ceiling, and every --json run carries a window signal naming what stopped the walk",
+      "source_text": "'channel messages' gains a time-window option (--after/--since) that pages past the 100-message cap, and its --json payload carries an explicit signal for whether the requested window was fully covered.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o5",
+      "claim_id": "c16",
+      "seam": "channel _message_dict author object",
+      "behavior": "author.bot and author.global_name are returned for every message with no extra fetch_user call",
+      "source_text": "_message_dict() gains author.bot and author.global_name, matching the fields 'user get' already returns.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o6",
+      "claim_id": "c17",
+      "seam": "user get batch resolution",
+      "behavior": "many ids resolve in one login session in input order, --json is always an array, and a per-id failure yields an error entry while the process exits 0",
+      "source_text": "'user get' takes one or more ids (varargs, plus --ids-file with '-' for stdin), resolves them all inside one discord_client.run() session, and always emits a JSON array \u2014 including for a single id. Resolution is tolerant per id: an unresolvable id yields an error entry instead of failing the batch.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o7",
+      "claim_id": "c19",
+      "seam": "package import surface",
+      "behavior": "no top-level third-party import anywhere in the runtime package and dependencies == []",
+      "source_text": "Zero runtime dependencies is unchanged: discord.File and everything else new stays behind discord_client.require_discord()'s lazy import under the [discord] extra. tests/test_no_runtime_deps.py still passes untouched.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o8",
+      "claim_id": "c27",
+      "seam": "channel messages ordering across both read modes",
+      "behavior": "output is oldest-first for a windowed read AND a plain read, never relying on history()'s context-dependent oldest_first default",
+      "source_text": "The paged read must emit oldest-first regardless of whether a window was given: discord.py's history() sets oldest_first=True by default when after= is passed, so channel.py's existing unconditional collected.reverse() would silently flip a windowed read into newest-first \u2014 the opposite of the documented 'oldest first, the natural reading order' contract.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o9",
+      "claim_id": "c28",
+      "seam": "--since parsing",
+      "behavior": "every accepted --since form returns a timezone-aware UTC instant, identical under any host TZ",
+      "source_text": "Every datetime handed to history() must be timezone-aware UTC. discord.py treats a NAIVE datetime as LOCAL time, so the confirmed q3 decision that a date-only '--since 2026-06-01' means midnight UTC is only true if the CLI attaches tzinfo itself.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o10",
+      "claim_id": "c29",
+      "seam": "discord_client 413 mapping",
+      "behavior": "an HTTPException with status 413 becomes a CliError whose remediation names the boost-tier dependence, exiting 1 with the error:/hint: stderr shape",
+      "source_text": "Attachment argument errors must be caught by the verb, not left to discord_client.run's handler chain: discord.File(path) raises OSError on an unreadable path and Messageable.send raises ValueError (files list too long) and TypeError \u2014 none of which are discord.* exceptions, so run()'s mapping misses them and they fall through to the generic catch-all, losing the typed remediation c13 promises.",
+      "origin": "llm",
+      "status": "proposed"
+    },
+    {
+      "id": "o11",
+      "claim_id": "c18",
+      "seam": "explain / learn / overview prose",
+      "behavior": "all three self-teaching surfaces describe the shipped flags, including --ids-file in learn's JSON payload",
+      "source_text": "The self-teaching surfaces stay true: explain/catalog.py entries, learn.py (_TEXT and _as_json_payload) and overview.py (_VERBS) all describe the new flags.",
+      "origin": "llm",
+      "status": "proposed"
+    }
+  ]
 }
