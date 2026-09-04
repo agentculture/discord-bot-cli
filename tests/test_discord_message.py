@@ -200,3 +200,19 @@ def test_message_post_text_only_still_parses(
     rc = main(["message", "post", "123", "plain text"])
     assert rc == 0
     assert ("send", "plain text") in fake_discord.channel.calls
+
+
+def test_post_with_files_passes_upload_bytes_to_the_transport(
+    fake_discord, tmp_path, capsys
+) -> None:
+    """The verb hands the size it already read to run(), for the 413 message."""
+    f = tmp_path / "chart.png"
+    f.write_bytes(b"z" * 321)
+    assert main(["message", "post", "123", "hi", "--file", str(f), "--json"]) == 0
+    assert fake_discord.run_kwargs[-1]["upload_bytes"] == 321
+
+
+def test_post_without_files_passes_no_upload_bytes(fake_discord, capsys) -> None:
+    """A text-only post supplies nothing, so a 413 could never invent a number."""
+    assert main(["message", "post", "123", "hi", "--json"]) == 0
+    assert fake_discord.run_kwargs[-1]["upload_bytes"] is None

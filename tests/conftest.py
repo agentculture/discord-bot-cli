@@ -308,6 +308,7 @@ class FakeClient:
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, Any]] = []
+        self.run_kwargs: list[dict[str, Any]] = []
         self.closed = False
         self.guild = FakeGuild()
         self.channel = FakeChannel()
@@ -357,7 +358,10 @@ def fake_discord(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
     """
     client = FakeClient()
 
-    def fake_run(action: Any) -> Any:
+    def fake_run(action: Any, **kwargs: Any) -> Any:
+        # Mirror the real ``run``'s keyword-only extras (e.g. ``upload_bytes``)
+        # so a verb passing one is exercised rather than TypeError-ing here.
+        client.run_kwargs.append(kwargs)
         return asyncio.run(action(client))
 
     monkeypatch.setattr("discord_bot_cli.discord_client.run", fake_run)

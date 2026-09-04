@@ -271,3 +271,50 @@ def test_run_maps_413_using_real_discord_exception(monkeypatch: pytest.MonkeyPat
     assert exc.value.code == EXIT_USER_ERROR
     assert "413" in exc.value.message
     assert "Request entity too large" in exc.value.message
+
+
+def test_413_names_the_byte_size_when_the_caller_supplies_it(patched_run: None) -> None:
+    """With ``upload_bytes``, the 413 says how much was actually sent.
+
+    This closes the gap recorded as deviation d2: discord.py's HTTPException
+    never carries the outgoing request size, so the number has to be threaded
+    down from the verb that already read it.
+    """
+
+    async def action(client: object) -> None:
+        raise _HTTPException("Request entity too large", 413)
+
+    with pytest.raises(CliError) as exc:
+        discord_client.run(action, upload_bytes=11_997_184)
+    assert "11.44 MB" in exc.value.message
+    assert "413" in exc.value.message
+    assert "Request entity too large" in exc.value.message
+
+
+def test_413_never_invents_a_size_when_none_was_supplied(patched_run: None) -> None:
+    """Without ``upload_bytes`` the message carries no size at all — no fabrication."""
+
+    async def action(client: object) -> None:
+        raise _HTTPException("Request entity too large", 413)
+
+    with pytest.raises(CliError) as exc:
+        discord_client.run(action)
+    assert "sent" not in exc.value.message
+    assert "MB" not in exc.value.message
+
+
+def test_upload_bytes_is_reported_not_gated(patched_run: None) -> None:
+    """A large ``upload_bytes`` does not itself block the request.
+
+    The q2 decision forbids a size pre-flight: only Discord knows the guild's
+    boost-tier cap. The number is read for the error message alone, so a huge
+    value must still reach Discord rather than be rejected client-side.
+    """
+    reached = []
+
+    async def action(client: object) -> str:
+        reached.append(True)
+        return "ok"
+
+    assert discord_client.run(action, upload_bytes=10**12) == "ok"
+    assert reached == [True]

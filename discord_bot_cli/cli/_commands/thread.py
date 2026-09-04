@@ -22,6 +22,7 @@ from discord_bot_cli.cli._commands._attachments import (
     attachments_payload,
     build_files,
     require_content_or_files,
+    upload_bytes,
 )
 from discord_bot_cli.cli._commands._discord_common import add_json, emit_noun_overview
 from discord_bot_cli.cli._output import emit_result
@@ -63,6 +64,7 @@ def cmd_thread_post(args: argparse.Namespace) -> int:
     thread_id = discord_client.parse_id(args.thread_id, "thread_id")
     require_content_or_files(args.content, args.file)
     files = build_files(args.file)
+    sent_bytes = upload_bytes(args.file)
 
     async def action(client: object) -> dict[str, object]:
         thread = await client.fetch_channel(thread_id)
@@ -73,7 +75,7 @@ def cmd_thread_post(args: argparse.Namespace) -> int:
             "attachments": attachments_payload(message),
         }
 
-    result = discord_client.run(action)
+    result = discord_client.run(action, upload_bytes=sent_bytes)
     _emit(
         result,
         f"posted message {result['id']} to thread {thread_id}",

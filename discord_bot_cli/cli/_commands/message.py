@@ -34,6 +34,7 @@ from discord_bot_cli.cli._commands._attachments import (
     attachments_payload,
     build_files,
     require_content_or_files,
+    upload_bytes,
 )
 from discord_bot_cli.cli._commands._discord_common import add_json, emit_noun_overview
 from discord_bot_cli.cli._output import emit_result
@@ -54,6 +55,7 @@ def cmd_message_post(args: argparse.Namespace) -> int:
     channel_id = discord_client.parse_id(args.channel_id, "channel_id")
     require_content_or_files(args.content, args.file)
     files = build_files(args.file)
+    sent_bytes = upload_bytes(args.file)
 
     async def action(client: object) -> dict[str, object]:
         channel = await client.fetch_channel(channel_id)
@@ -64,7 +66,7 @@ def cmd_message_post(args: argparse.Namespace) -> int:
             "attachments": attachments_payload(message),
         }
 
-    result = discord_client.run(action)
+    result = discord_client.run(action, upload_bytes=sent_bytes)
     _emit(result, f"posted message {result['id']}", json_mode=bool(getattr(args, "json", False)))
     return 0
 
@@ -74,6 +76,7 @@ def cmd_message_reply(args: argparse.Namespace) -> int:
     message_id = discord_client.parse_id(args.message_id, "message_id")
     require_content_or_files(args.content, args.file)
     files = build_files(args.file)
+    sent_bytes = upload_bytes(args.file)
 
     async def action(client: object) -> dict[str, object]:
         channel = await client.fetch_channel(channel_id)
@@ -86,7 +89,7 @@ def cmd_message_reply(args: argparse.Namespace) -> int:
             "attachments": attachments_payload(reply),
         }
 
-    result = discord_client.run(action)
+    result = discord_client.run(action, upload_bytes=sent_bytes)
     _emit(
         result, f"replied with message {result['id']}", json_mode=bool(getattr(args, "json", False))
     )

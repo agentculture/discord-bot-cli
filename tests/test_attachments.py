@@ -153,3 +153,20 @@ def test_attachments_payload_empty() -> None:
         attachments: list = []
 
     assert _attachments.attachments_payload(_FakeMessage()) == []
+
+
+def test_upload_bytes_totals_the_paths(tmp_path) -> None:
+    a = tmp_path / "a.bin"
+    a.write_bytes(b"x" * 100)
+    b = tmp_path / "b.bin"
+    b.write_bytes(b"y" * 23)
+    assert _attachments.upload_bytes([str(a), str(b)]) == 123
+
+
+def test_upload_bytes_is_none_without_files() -> None:
+    assert _attachments.upload_bytes([]) is None
+
+
+def test_upload_bytes_is_none_rather_than_raising_on_a_vanished_path(tmp_path) -> None:
+    """A missing number must never turn a size error into a different error."""
+    assert _attachments.upload_bytes([str(tmp_path / "gone.bin")]) is None

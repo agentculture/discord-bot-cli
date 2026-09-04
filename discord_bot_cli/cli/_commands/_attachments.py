@@ -106,6 +106,25 @@ def build_files(paths: list[str]) -> list[Any]:
     return files
 
 
+def upload_bytes(paths: list[str]) -> int | None:
+    """Total size of ``paths`` in bytes, or ``None`` when there are none.
+
+    This is **not** a pre-flight check. Nothing here gates on the number: only
+    Discord knows a guild's real per-file cap (it depends on the boost tier),
+    so a client-side limit would wrongly reject valid uploads. The size is read
+    purely so that, *if* Discord answers 413, the error can say how much was
+    actually sent instead of leaving the caller to guess. A path that vanishes
+    between validation and here yields ``None`` rather than raising — a missing
+    number must never turn a size error into a different error.
+    """
+    if not paths:
+        return None
+    try:
+        return sum(os.path.getsize(path) for path in paths)
+    except OSError:
+        return None
+
+
 def _check_readable_file(path: str) -> None:
     """Raise a user error unless ``path`` is a readable regular file.
 
