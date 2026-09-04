@@ -93,6 +93,8 @@ def _message_dict(message: object) -> dict[str, object]:
         "author": {
             "id": str(getattr(author, "id", "")),
             "name": getattr(author, "name", None),
+            "bot": bool(getattr(author, "bot", False)),
+            "global_name": getattr(author, "global_name", None),
         },
         "content": getattr(message, "content", ""),
         "created_at": created.isoformat() if created is not None else None,
