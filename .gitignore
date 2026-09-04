@@ -229,3 +229,7 @@ skills.local.yaml
 
 # devague working state (not committed by default)
 .devague/reviews/
+
+# Session/runner artifacts — never tracked
+.claude/scheduled_tasks.lock
+.convertible/

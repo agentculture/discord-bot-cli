@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/). This project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-09-04
+
+### Fixed
+
+- Republish as 0.6.1: PyPI permanently refuses a filename that was previously uploaded and deleted, and both 0.5.0 and 0.6.0 had been. The 0.6.0 push to main therefore failed at the upload step with 'This filename was previously used by a file that has since been deleted.' No code changed between 0.6.0 and 0.6.1 — the version number exists solely to obtain a fresh, never-used filename.
+- Stop tracking session/runner artifacts that were committed by accident in #15: `.claude/scheduled_tasks.lock` (a PID + session lock) and `.convertible/` (task-runner traces). Both are now gitignored. `.eidetic/memory/` stays tracked — CLAUDE.md declares that store in-repo and public on purpose.
+
 ## [0.6.0] - 2026-09-04
 
 ### Added
