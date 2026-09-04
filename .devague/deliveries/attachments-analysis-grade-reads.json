@@ -2,7 +2,7 @@
   "plan_slug": "attachments-analysis-grade-reads",
   "schema_version": 2,
   "created": "2026-09-04T16:24:10Z",
-  "updated": "2026-09-04T17:52:49Z",
+  "updated": "2026-09-04T18:06:24Z",
   "deviations": [
     {
       "id": "d1",
@@ -375,6 +375,63 @@
       "status": "proposed",
       "superseded": false,
       "seq": 20
+    },
+    {
+      "id": "e19",
+      "obligation_ref": "o4",
+      "test_ref": "manual live pipeline: 'channel messages --since 365d --json' across 9 readable text channels of guild 1413999242648748195",
+      "behavior_text": "windowed reads page far past the 100-message cap and report fully_covered=true on every channel",
+      "contract_text": "channel messages pages past the 100-message cap and reports coverage honestly",
+      "evidence_type": "manual",
+      "strength": "sensitivity",
+      "strength_basis": "13,797 messages aggregated; the largest single channel ('culture') returned 10,607 in one walk \u2014 roughly 107 REST pages \u2014 and 9/9 channels reported fully_covered=true with stopped_by=window_end. At this volume a broken pager could not return a plausible-looking result: pre-0.6.0 the same call was capped at 100.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T21:06:24+03:00",
+        "commit": "2b4b21b"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 21
+    },
+    {
+      "id": "e20",
+      "obligation_ref": "o5",
+      "test_ref": "manual live pipeline: aggregating 13,797 real messages by author.id, filtering on author.bot",
+      "behavior_text": "author.bot and author.global_name arrive on every message, so bots are separable and names renderable with no per-author round trip",
+      "contract_text": "_message_dict gains author.bot and author.global_name",
+      "evidence_type": "manual",
+      "strength": "sensitivity",
+      "strength_basis": "Of 10 distinct authors, 8 were bots accounting for 13,776 of 13,797 messages (99.8%). Without the bot flag the 'top participants' ranking this feature exists to produce would have been 99.8% noise \u2014 the field is load-bearing, not cosmetic. Zero fetch_user calls were issued during aggregation.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T21:06:24+03:00",
+        "commit": "2b4b21b"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 22
+    },
+    {
+      "id": "e21",
+      "obligation_ref": "o6",
+      "test_ref": "manual live: 'cat ids.txt | discord-bot-cli user get --ids-file - --json', then 'user get <real> <bogus> --json'",
+      "behavior_text": "ids piped on stdin resolve in one login in input order; a bogus id yields an {id, error, remediation} entry beside a real result and the process still exits 0",
+      "contract_text": "user get gains a tolerant batch form emitting a JSON array",
+      "evidence_type": "manual",
+      "strength": "sensitivity",
+      "strength_basis": "Resolved from stdin in 1.25s in a single login. Tolerance proven against real Discord: id 999999999999999999 returned 'Unknown User' as an entry IN the array while 973870192037867580 resolved normally, exit 0 \u2014 the failure mode the plan promised, observed rather than stubbed.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T21:06:24+03:00",
+        "commit": "2b4b21b"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 23
     }
   ],
   "deltas": [

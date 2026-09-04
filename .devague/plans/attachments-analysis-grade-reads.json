@@ -5,7 +5,7 @@
   "schema_version": 5,
   "status": "exported",
   "created": "2026-09-04T16:03:33Z",
-  "updated": "2026-09-04T17:20:39Z",
+  "updated": "2026-09-04T18:06:24Z",
   "targets": [
     {
       "id": "c1",
@@ -853,6 +853,14 @@
       "text": "DISCORD_TEST_PAGING_SINCE is not wired into .github/workflows/live-tests.yml as a repo variable, so the paging-coverage test self-skips in CI. No task in this plan owns that workflow file, and t11 correctly did not reach outside its scope to edit it. Until the variable is added, c25/h27 ('a 90-day scan of a busy channel emits its coverage signal') is proven only by a local run, never by the remote lane. CLAUDE.md states this plainly rather than implying CI covers it.",
       "kind": "follow_up",
       "task_id": "t11",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r10",
+      "text": "Scanning N channels costs N processes and N logins: the 13-channel sweep run live took over two minutes, dominated by per-invocation login. This is structurally the SAME complaint issue #14 made about 'user get' resolving one id per process \u2014 which this increment fixed \u2014 but at the channel level, which it did not. jetson-ai-lab-cli targets ~134 channels, so it will hit this immediately. Out of scope for the delivered plan; worth filing back to the consumer as a known cost, or a future 'channel messages' batch/multi-channel form.",
+      "kind": "follow_up",
+      "task_id": null,
       "resolved": false,
       "resolution": ""
     }
