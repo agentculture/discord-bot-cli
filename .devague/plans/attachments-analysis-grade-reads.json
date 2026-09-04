@@ -5,7 +5,7 @@
   "schema_version": 5,
   "status": "exported",
   "created": "2026-09-04T16:03:33Z",
-  "updated": "2026-09-04T16:10:57Z",
+  "updated": "2026-09-04T16:28:24Z",
   "targets": [
     {
       "id": "c1",
@@ -789,8 +789,8 @@
       "text": "t4 and t5 are file-disjoint and land in the same wave, but both must emit an IDENTICAL --json attachment payload shape. Built in parallel by two agents, they can diverge in field names or nesting and still pass their own acceptance criteria. The merge gate must diff the two payload shapes, not just run both test files.",
       "kind": "unknown_nonblocking",
       "task_id": "t5",
-      "resolved": false,
-      "resolution": ""
+      "resolved": true,
+      "resolution": "Discharged at the wave-2 merge gate. Both t4 and t5 use attachments_payload() verbatim under the key 'attachments', with identical per-file {id, filename, url, size} entries \u2014 verified by grepping the merged modules, not by trusting either agent's report. The mitigation was naming the mandated helper in both briefs rather than hoping two parallel agents would converge."
     },
     {
       "id": "r2",
@@ -835,6 +835,14 @@
     {
       "id": "r7",
       "text": "The live paging test needs a sandbox channel holding more than 100 messages inside the test window. #spark-tests may not have that history, in which case the test proves nothing while appearing to pass. Confirm the channel's message count before relying on that lane for c25/h27.",
+      "kind": "unknown_nonblocking",
+      "task_id": "t11",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r8",
+      "text": "The test fakes' send()/reply() do not echo the files they receive back into the returned message's .attachments \u2014 realistic, since real Discord only populates that after the HTTP round trip. So the '--json includes attachment ids and URLs' behaviour (c14/h3) is proven by construction (attachments_payload reads message.attachments verbatim) plus one monkeypatched round-trip simulation, NOT by an end-to-end stubbed assertion. Both t4 and t5 independently hit this. Only the live lane can close it, which raises the stakes on t11.",
       "kind": "unknown_nonblocking",
       "task_id": "t11",
       "resolved": false,

@@ -1,0 +1,25 @@
+{
+  "plan_slug": "attachments-analysis-grade-reads",
+  "schema_version": 2,
+  "created": "2026-09-04T16:24:10Z",
+  "updated": "2026-09-04T16:24:10Z",
+  "deviations": [
+    {
+      "id": "d1",
+      "what": "Extend t7's file scope to include tests/test_discord_integration.py, and let the main agent apply the one-line fix at the merge gate rather than sending the task agent back.",
+      "task_ref": "t7",
+      "reason": "t7's confirmed scope (user.py + test_discord_user.py) omitted tests/test_discord_integration.py, whose line 45 asserts the OLD single-object 'user get --json' shape. The approved always-array breaking change (c17, q1) necessarily invalidates that assertion, and no task in the plan owns that file \u2014 so the plan as confirmed could not reach a green suite for wave 1. A scoping error in the plan, not a failure by the task agent, which correctly refused to widen its own allowlist and reported the breakage.",
+      "affects": [
+        "c17",
+        "t10"
+      ],
+      "origin": "user",
+      "status": "approved",
+      "classification": "acceptable",
+      "seq": 1
+    }
+  ],
+  "evidence": [],
+  "deltas": [],
+  "supersessions": []
+}
