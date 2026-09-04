@@ -2,7 +2,7 @@
   "plan_slug": "attachments-analysis-grade-reads",
   "schema_version": 2,
   "created": "2026-09-04T16:24:10Z",
-  "updated": "2026-09-04T16:24:10Z",
+  "updated": "2026-09-04T16:29:24Z",
   "deviations": [
     {
       "id": "d1",
@@ -17,6 +17,20 @@
       "status": "approved",
       "classification": "acceptable",
       "seq": 1
+    },
+    {
+      "id": "d2",
+      "what": "t9's acceptance criterion 1 cannot be met as written: the 413 CliError surfaces Discord's own status text instead of 'naming the byte size that was sent'.",
+      "task_ref": "t9",
+      "reason": "discord.py 2.7.1's HTTPException.__init__ records only response, status, code and text \u2014 the outgoing request's byte size is never captured, and neither the exception nor the aiohttp response it wraps exposes it. Verified directly against the installed source, independently of the task agent's report. Since the q2 decision forbids a size pre-flight, no earlier layer recorded the size either, so at discord_client.run's handler chain the number is genuinely unrecoverable. The task brief pre-authorised this fallback ('do not fabricate a size'), and the agent took it rather than inventing a plausible number.",
+      "affects": [
+        "c13",
+        "h10"
+      ],
+      "origin": "llm",
+      "status": "proposed",
+      "classification": "acceptable",
+      "seq": 2
     }
   ],
   "evidence": [],

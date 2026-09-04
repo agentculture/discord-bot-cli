@@ -5,7 +5,7 @@
   "schema_version": 5,
   "status": "exported",
   "created": "2026-09-04T16:03:33Z",
-  "updated": "2026-09-04T16:28:24Z",
+  "updated": "2026-09-04T16:34:03Z",
   "targets": [
     {
       "id": "c1",
@@ -844,6 +844,14 @@
       "id": "r8",
       "text": "The test fakes' send()/reply() do not echo the files they receive back into the returned message's .attachments \u2014 realistic, since real Discord only populates that after the HTTP round trip. So the '--json includes attachment ids and URLs' behaviour (c14/h3) is proven by construction (attachments_payload reads message.attachments verbatim) plus one monkeypatched round-trip simulation, NOT by an end-to-end stubbed assertion. Both t4 and t5 independently hit this. Only the live lane can close it, which raises the stakes on t11.",
       "kind": "unknown_nonblocking",
+      "task_id": "t11",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r9",
+      "text": "DISCORD_TEST_PAGING_SINCE is not wired into .github/workflows/live-tests.yml as a repo variable, so the paging-coverage test self-skips in CI. No task in this plan owns that workflow file, and t11 correctly did not reach outside its scope to edit it. Until the variable is added, c25/h27 ('a 90-day scan of a busy channel emits its coverage signal') is proven only by a local run, never by the remote lane. CLAUDE.md states this plainly rather than implying CI covers it.",
+      "kind": "follow_up",
       "task_id": "t11",
       "resolved": false,
       "resolution": ""
