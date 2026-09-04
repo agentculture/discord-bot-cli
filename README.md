@@ -54,12 +54,13 @@ export DISCORD_BOT_TOKEN=...                 # read from the env, never a flag
 |------|--------------|
 | `channel list <guild_id>` | List a guild's channels. |
 | `channel messages <channel_id> [--limit N]` | Read the last N messages (1–100, default 20). |
-| `message post <channel_id> <content>` | Post a message; returns its id. |
-| `message reply <channel_id> <message_id> <content>` | Reply to a message. |
+| `channel messages <channel_id> --since W [--limit N]` | Read a time window, paging past the 100-message cap. `W` is an ISO 8601 timestamp, a date (`2026-06-01`, midnight UTC), or a duration (`90d`). `--limit` becomes a safety ceiling. |
+| `message post <channel_id> [content] [--file PATH]...` | Post a message, optionally with attachments; returns its id. |
+| `message reply <channel_id> <message_id> [content] [--file PATH]...` | Reply to a message, optionally with attachments. |
 | `message react <channel_id> <message_id> <emoji>` | Add a reaction. |
 | `thread create <channel_id> --name <name> [--message <id>]` | Create a thread (anchored or standalone). |
-| `thread post <thread_id> <content>` | Post a message into a thread. |
-| `user get <user_id>` | Look up a user's public profile. |
+| `thread post <thread_id> [content] [--file PATH]...` | Post into a thread, optionally with attachments. |
+| `user get <user_id> [<user_id> ...] [--ids-file <path>\|-]` | Look up one or more users. `--json` is **always** an array. |
 
 Each verb is **one-shot**: it connects, performs one action, and exits (no
 daemon, no gateway subscription). `post`/`reply`/`thread create` return the
@@ -72,7 +73,23 @@ discord channel list 1234567890 --json
 discord channel messages 1234567890 --limit 50 --json
 MSG=$(discord message post 1234567890 "hello" --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])')
 discord message react 1234567890 "$MSG" 👍
+
+# attach files (repeatable; content optional when a file is given)
+discord message post 1234567890 "weekly report" --file chart.svg --file table.png --json
+
+# read a real time window, then batch-resolve the authors in one login
+discord channel messages 1234567890 --since 90d --json > scan.json
+python3 -c 'import json;print("\n".join({m["author"]["id"] for m in json.load(open("scan.json"))["messages"] if not m["author"]["bot"]}))' \
+  | discord user get --ids-file - --json
 ```
+
+`--since` reads carry a `window` object in `--json` —
+`{since, limit, message_count, fully_covered, stopped_by}` — so a caller can
+tell a truncated scan from a complete one rather than guessing. Two things to
+know before reaching for `--file`: it is an **unsandboxed local read** (any path
+the process can open is uploaded to Discord — the operator owns which paths
+reach it), and the returned attachment `url` is a **reference, not storage**: it
+404s once the message is deleted.
 
 > The runtime package itself stays dependency-free — `discord.py` is imported
 > lazily inside the verb handlers, so a plain install never pulls it in.

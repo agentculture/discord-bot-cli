@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/). This project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-09-04
+
+### Added
+
+- `message post` / `message reply` / `thread post` accept a repeatable, order-preserving `--file PATH`; `content` is optional once at least one file is given. `--json` gains an `attachments` list of `{id, filename, url, size}` (#13).
+- `channel messages --since W` reads a real time window and pages past the 100-message REST cap. `W` is an ISO 8601 timestamp, a date-only `2026-06-01` (midnight UTC), or a duration like `90d` (units h/d/w/m). `--limit` may accompany it as a safety ceiling (#14).
+- `channel messages --json` now always carries a `window` coverage signal — `{since, limit, message_count, fully_covered, stopped_by}` where `stopped_by` is `limit` | `window_end` | `no_window` — so a caller can tell a truncated read from a complete one instead of guessing (#14).
+- `channel messages --json` author objects now include `bot` and `global_name`, matching what `user get` already returned — a statistics pipeline can filter bots and render display names without a second round trip per author (#14).
+- `user get` takes many ids: positional varargs and/or `--ids-file <path|->` (newline-delimited, `-` for stdin), all resolved inside one login session, in input order (#14).
+- A Discord HTTP 413 on an upload is now mapped to the CLI's typed error contract with a remediation naming the guild's boost-tier dependence.
+
+### Changed
+
+- **BREAKING:** `user get --json` now ALWAYS emits an array, including for a single id — previously a single id returned a bare object. Callers written against the old shape must index or iterate the array. An unresolvable id yields an `{id, error, remediation}` entry in place and the process still exits 0, so one bad id no longer fails a whole batch.
+- `explain`, `learn` and `overview` document the new flags, and state two boundaries explicitly: `--file` is an unsandboxed local read with no path allow-listing, and an attachment URL is a reference that 404s once the message is deleted, not durable storage.
+- The live-test lane gains a real upload test and a paging test, and the docs now state plainly that these tests leave permanent artifacts because this CLI has no `delete` verb.
+
+### Fixed
+
+- `channel messages` no longer relies on `history()`'s context-dependent ordering: discord.py flips `oldest_first` to `True` as soon as `after=` is passed, so the previous unconditional `reverse()` would have emitted a windowed read newest-first. `oldest_first` is now passed explicitly on every call and both paths are ordering-asserted.
+- `--since` values are always resolved to timezone-aware UTC. discord.py reads a naive datetime as local time, so a date-only window would otherwise have silently shifted by the machine's UTC offset.
+
 ## [0.5.0] - 2026-06-24
 
 ### Added
