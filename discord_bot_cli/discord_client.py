@@ -132,6 +132,24 @@ async def _run_async[T](
             remediation="check the id is correct and visible to the bot",
         ) from exc
     except discord.HTTPException as exc:
+        if getattr(exc, "status", None) == 413:
+            # There is deliberately no attachment-size pre-flight anywhere in
+            # this CLI: only Discord knows a guild's real per-file cap, and it
+            # depends on the guild's boost tier, so hard-coding a limit here
+            # would wrongly reject valid uploads on a boosted guild. The 413
+            # response is therefore the entire size story available at this
+            # seam — discord.py's HTTPException carries no record of the byte
+            # size that was actually sent (verified against discord.py 2.7.1:
+            # it only reads the response status and body), so we surface
+            # Discord's own status text rather than fabricate a number.
+            raise CliError(
+                code=EXIT_USER_ERROR,
+                message=f"Discord rejected the upload as too large (413): {_http_text(exc)}",
+                remediation=(
+                    "the per-file size limit depends on this guild's boost tier, not a "
+                    "fixed size — resend a smaller file, or split/compress it"
+                ),
+            ) from exc
         raise CliError(
             code=EXIT_USER_ERROR,
             message=f"Discord API error ({getattr(exc, 'status', '?')}): {_http_text(exc)}",

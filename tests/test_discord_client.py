@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import sys
 from types import SimpleNamespace
 
@@ -9,6 +10,7 @@ import pytest
 
 from discord_bot_cli import discord_client
 from discord_bot_cli.cli._errors import EXIT_ENV_ERROR, EXIT_USER_ERROR, CliError
+from discord_bot_cli.cli._output import emit_error
 
 # --- require_token --------------------------------------------------------
 
@@ -171,3 +173,101 @@ def test_run_maps_discord_exceptions(patched_run: None, exc_factory, expected_co
     assert exc.value.code == expected_code
     assert needle in exc.value.message
     assert _FakeClient.last is not None and _FakeClient.last.closed is True
+
+
+# --- HTTP 413 (payload too large) -----------------------------------------
+#
+# Discord's HTTPException carries no record of the byte size the client
+# attempted to send (verified against the installed discord.py 2.7.1:
+# HTTPException.__init__ only reads response.status and the response body's
+# `message`/`code`/`errors` fields — nothing about the outgoing request size).
+# There is deliberately no attachment size pre-flight in this CLI (only
+# Discord knows a guild's real per-file cap, which depends on its boost
+# tier), so the 413 response — Discord's own status text — is the entire size
+# story available at this seam. Criterion 1's "naming the byte size that was
+# sent" is therefore satisfied honestly via Discord's own reason/text, not a
+# fabricated number.
+
+
+def test_run_maps_413_to_cli_error_naming_discord_message(patched_run: None) -> None:
+    """A 413 HTTPException becomes a CliError carrying Discord's own text."""
+
+    async def action(client: object) -> None:
+        raise _HTTPException("Request entity too large", 413)
+
+    with pytest.raises(CliError) as exc:
+        discord_client.run(action)
+    assert exc.value.code == EXIT_USER_ERROR
+    assert "413" in exc.value.message
+    assert "Request entity too large" in exc.value.message
+    assert _FakeClient.last is not None and _FakeClient.last.closed is True
+
+
+def test_413_remediation_names_boost_tier_not_a_fixed_limit(patched_run: None) -> None:
+    """The remediation explains the limit is boost-tier-dependent, not a hard-coded size."""
+
+    async def action(client: object) -> None:
+        raise _HTTPException("Request entity too large", 413)
+
+    with pytest.raises(CliError) as exc:
+        discord_client.run(action)
+    remediation = exc.value.remediation.lower()
+    assert "boost" in remediation
+    # Must not assert a fixed byte ceiling (e.g. the unboosted 8 MiB floor) as
+    # if it were universally true — that would be wrong on a boosted guild.
+    assert "8 mib" not in remediation
+    assert "8mb" not in remediation
+
+
+def test_413_stderr_shape_and_exit_code(patched_run: None) -> None:
+    """The mapped error renders on stderr as `error:`/`hint:` lines, exit code 1."""
+
+    async def action(client: object) -> None:
+        raise _HTTPException("Request entity too large", 413)
+
+    with pytest.raises(CliError) as exc:
+        discord_client.run(action)
+
+    assert exc.value.code == EXIT_USER_ERROR  # exit code 1
+    stderr = io.StringIO()
+    emit_error(exc.value, json_mode=False, stream=stderr)
+    rendered = stderr.getvalue()
+    lines = rendered.splitlines()
+    assert lines[0].startswith("error:")
+    assert any(line.startswith("hint:") for line in lines)
+
+
+def test_run_maps_413_using_real_discord_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sanity check against the real discord.py HTTPException/response shape.
+
+    Builds a genuine ``discord.HTTPException`` (a ``SimpleNamespace`` stands in
+    for the aiohttp response, same trick as ``conftest.make_discord_error``)
+    and drives it through the *real* discord module returned by
+    ``require_discord`` — not the local stand-in classes used elsewhere in
+    this file — so the ``isinstance`` checks in ``_run_async`` are exercised
+    against the real class hierarchy, not a lookalike.
+    """
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
+    real_discord = discord_client.require_discord()
+    response = SimpleNamespace(status=413, reason="Payload Too Large")
+    real_exc = real_discord.HTTPException(response, "Request entity too large")
+
+    real_module = SimpleNamespace(
+        Client=_FakeClient,
+        Intents=SimpleNamespace(none=lambda: object()),
+        DiscordException=real_discord.DiscordException,
+        HTTPException=real_discord.HTTPException,
+        Forbidden=real_discord.Forbidden,
+        NotFound=real_discord.NotFound,
+        LoginFailure=real_discord.LoginFailure,
+    )
+    monkeypatch.setattr(discord_client, "require_discord", lambda: real_module)
+
+    async def action(client: object) -> None:
+        raise real_exc
+
+    with pytest.raises(CliError) as exc:
+        discord_client.run(action)
+    assert exc.value.code == EXIT_USER_ERROR
+    assert "413" in exc.value.message
+    assert "Request entity too large" in exc.value.message
