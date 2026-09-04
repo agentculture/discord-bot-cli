@@ -2,7 +2,7 @@
   "plan_slug": "attachments-analysis-grade-reads",
   "schema_version": 2,
   "created": "2026-09-04T16:24:10Z",
-  "updated": "2026-09-04T16:42:22Z",
+  "updated": "2026-09-04T17:21:05Z",
   "deviations": [
     {
       "id": "d1",
@@ -299,6 +299,63 @@
       "status": "proposed",
       "superseded": false,
       "seq": 16
+    },
+    {
+      "id": "e15",
+      "obligation_ref": "o3",
+      "test_ref": "tests/test_live_discord.py::test_live_message_post_with_file_upload (DISCORD_LIVE_TESTS=1, real Discord); plus a manual 'message post --file' returning attachment id 1545483523270377482, size 39",
+      "behavior_text": "a real upload returns a real attachment id, a working CDN url and a nonzero size in --json",
+      "contract_text": "--json includes the resulting attachment ids and URLs",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "Ran the gated live lane against the #spark-tests sandbox in the JetsonBot experiments guild: 7 passed. This SUPERSEDES e3's fidelity-only strength \u2014 the behaviour is now proven end to end against Discord, not by construction. Risk r8 closed.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T20:21:05+03:00",
+        "commit": "6e97c87"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 17
+    },
+    {
+      "id": "e16",
+      "obligation_ref": "o4",
+      "test_ref": "tests/test_live_discord.py::test_live_channel_messages_pages_past_100 (real Discord); plus a manual 'channel messages --since 3650d --json' returning 123 messages",
+      "behavior_text": "a window over a channel with more than 100 messages returns all of them, oldest-first, with fully_covered=true and stopped_by=window_end",
+      "contract_text": "channel messages pages past the 100-message cap and reports coverage honestly",
+      "evidence_type": "automated",
+      "strength": "execution",
+      "strength_basis": "123 messages returned in 2.5s against real REST \u2014 above the >100 precondition, so discord.py's internal paging was genuinely exercised rather than vacuously satisfied. SUPERSEDES e4's fake-only basis. Risk r7 closed.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T20:21:05+03:00",
+        "commit": "6e97c87"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 18
+    },
+    {
+      "id": "e17",
+      "obligation_ref": "o14",
+      "test_ref": "manual: decoded the ?ex=/&is=/&hm= parameters on a live attachment URL; then 'discord-bot-cli explain message post' and 'learn --json'",
+      "behavior_text": "the CLI states an attachment URL is a signed CDN link expiring ~24h after issue AND 404ing once the message is deleted",
+      "contract_text": "an attachment URL is a reference, not storage",
+      "evidence_type": "manual",
+      "strength": "execution",
+      "strength_basis": "The live URL carried signed expiry params decoding to exactly 24h of validity. The PREVIOUS wording (404s on delete only) was an understatement and has been corrected in catalog.py, learn.py and README.md. Frame park v7 is now answered rather than open \u2014 e14's caveat was correct.",
+      "outcome": "pass",
+      "run": {
+        "timestamp": "2026-09-04T20:21:05+03:00",
+        "commit": "6e97c87"
+      },
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false,
+      "seq": 19
     }
   ],
   "deltas": [
@@ -366,6 +423,20 @@
         "c25"
       ],
       "evidence_refs": [],
+      "origin": "llm",
+      "status": "proposed",
+      "superseded": false
+    },
+    {
+      "id": "b6",
+      "kind": "amended",
+      "behavior_text": "An attachment URL is documented as a SIGNED CDN link that expires roughly 24h after issue (?ex=/&is=/&hm=), in addition to 404ing once the message is deleted. The plan and the frame's c33 claim described only the delete case; the live run showed the URL also dies on its own while the message still exists.",
+      "caused_by": [
+        "c33"
+      ],
+      "evidence_refs": [
+        "e17"
+      ],
       "origin": "llm",
       "status": "proposed",
       "superseded": false
