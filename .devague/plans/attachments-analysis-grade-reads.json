@@ -1,0 +1,837 @@
+{
+  "slug": "attachments-analysis-grade-reads",
+  "title": "Attachments + analysis-grade reads",
+  "frame_slug": "attachments-analysis-grade-reads",
+  "schema_version": 5,
+  "status": "exported",
+  "created": "2026-09-04T16:03:33Z",
+  "updated": "2026-09-04T16:09:55Z",
+  "targets": [
+    {
+      "id": "c1",
+      "kind": "announcement",
+      "text": "discord-bot-cli 0.6.0 ships file attachments on the write verbs and the read fields a statistics pipeline needs: 'message post/reply' and 'thread post' take a repeatable --file, and 'channel messages' can page a real time window while 'user get' resolves a batch of ids in one session (always emitting a JSON array \u2014 a breaking change to the single-id output shape, hence the minor bump from 0.5.0).",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h11",
+      "kind": "honesty",
+      "text": "Both filing consumers can actually drop their workarounds on this surface \u2014 sensibo-cli's chart delivery and jetson-ai-lab-cli's participation scan each work end to end against the shipped flags, not just against our stubbed tests.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h12",
+      "kind": "honesty",
+      "text": "The increment holds the repo's two hard constraints unchanged: dependencies = [] (test_no_runtime_deps.py untouched) and one-shot no-daemon transport.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c2",
+      "kind": "audience",
+      "text": "Consumer CLIs and mesh agents that use discord-bot-cli as a transport: sensibo-cli (posting rendered chart reports) and jetson-ai-lab-cli (a read-only participation-statistics report over ~134 Jetson AI Lab channels), plus any future agent that wants to attach a file or scan a channel.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h13",
+      "kind": "honesty",
+      "text": "The audience is real and named, not hypothetical: issues #13 and #14 were filed by those two consumer agents against this repo, each describing a concrete blocked or degraded workflow \u2014 not a speculative 'someone might want this'.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c3",
+      "kind": "after_state",
+      "text": "An agent posts a rendered report image to Discord with a single 'message post <channel> \"caption\" --file chart.svg' call, through this CLI's CliError contract and --json payload, instead of hand-rolling a multipart/form-data webhook POST.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h14",
+      "kind": "honesty",
+      "text": "'One call' is literally true end to end: a single 'message post <channel> \"caption\" --file chart.svg' invocation uploads and posts, with no companion webhook step, no pre-upload to a host, and no second command to attach.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c4",
+      "kind": "after_state",
+      "text": "A read-only scan can express a time window ('the last 90 days'), pages past the 100-message REST cap, and can tell from --json whether the requested window was fully covered rather than silently truncated.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h15",
+      "kind": "honesty",
+      "text": "'Pages past the cap' means the caller actually receives every message in the window, not just a larger page \u2014 a 90-day window over a channel with 500 messages returns 500, and the coverage signal says so.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c5",
+      "kind": "after_state",
+      "text": "A statistics pipeline keyed on author.id can exclude bots and render human-recognisable names straight from 'channel messages --json', without a second round trip per author.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h16",
+      "kind": "honesty",
+      "text": "'Without a second round trip' holds for both fields: bot and global_name come from the author object discord.py already attaches to each history message, so no extra fetch_user call is issued per author.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c6",
+      "kind": "after_state",
+      "text": "Resolving several hundred user ids costs one process and one Discord login instead of one per id, and a single unresolvable id yields an error entry rather than failing the batch.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h17",
+      "kind": "honesty",
+      "text": "'One login' is observably true, not just architecturally intended: a batch of N ids results in exactly one discord.Client login and one close, assertable by counting calls against the stubbed seam.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c7",
+      "kind": "before_state",
+      "text": "'message post' and 'message reply' only send text (message.py:34-45 calls channel.send(args.content) with no file= argument); sensibo-cli worked around it with ~30 lines of urllib multipart against a raw Discord webhook URL, bypassing this CLI's error contract and --json entirely.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h18",
+      "kind": "honesty",
+      "text": "The gap is real and not an undocumented flag: 'message post --help' shows no file option, and a grep for attachment/multipart/files/upload across the package returns nothing \u2014 both checks the issue reporter ran and this scope pass re-ran against message.py.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c8",
+      "kind": "before_state",
+      "text": "'channel messages' has _LIMIT_MAX = 100 and only --limit, so a time window is unexpressible and a busy channel silently truncates \u2014 the caller cannot distinguish hitting the cap from reaching the end of the window.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h19",
+      "kind": "honesty",
+      "text": "The truncation is genuinely silent: nothing in the current --json payload or exit code tells a caller that --limit 100 was a ceiling rather than the end of the channel's history.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c9",
+      "kind": "before_state",
+      "text": "_message_dict() serialises only author.id and author.name \u2014 no 'bot' flag and no 'global_name' \u2014 even though 'user get' already returns both, so the field is exposed on one noun and not the other.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h20",
+      "kind": "honesty",
+      "text": "The asymmetry is exactly as described: 'user get' returns both bot and global_name today (user.py), while _message_dict() (channel.py) returns neither \u2014 so this is closing an inconsistency inside one CLI, not adding a novel field.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c10",
+      "kind": "before_state",
+      "text": "'user get' takes exactly one id per invocation, each its own process and REST round trip; resolving a few hundred ids is the bottleneck in an otherwise fast channel scan.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h21",
+      "kind": "honesty",
+      "text": "The cost is per-invocation, not merely per-request: each 'user get' is a separate OS process AND a separate Discord login handshake, so the overhead a batch form removes is real rather than a micro-optimisation of one HTTP call.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c11",
+      "kind": "why_it_matters",
+      "text": "Every consumer that hits these gaps re-implements a seam that belongs in the transport CLI \u2014 two sibling repos already carry local workarounds (sensibo-cli's webhook multipart; jetson-ai-lab-cli reaching into raw discord.py objects inside action closures). Each workaround is a second implementation of this repo's job and escapes its error/JSON contract.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h22",
+      "kind": "honesty",
+      "text": "Both workarounds actually exist in the sibling repos as described \u2014 sensibo-cli's urllib multipart webhook post and jetson-ai-lab-cli's reuse of discord_client.run() with raw discord.py objects \u2014 rather than being hypothetical duplication we are arguing against.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c12",
+      "kind": "requirement",
+      "text": "'message post', 'message reply' and 'thread post' accept a repeatable, order-preserving --file PATH; the positional content becomes optional once at least one --file is given (an attachment-only message is valid on Discord).",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h1",
+      "kind": "honesty",
+      "text": "The installed discord.py exposes send(files=[discord.File(...)]) and reply(files=...) on every Messageable we use (TextChannel, Thread, Message.reply) \u2014 verified against the version pinned by the [discord] extra, not assumed from docs.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h2",
+      "kind": "honesty",
+      "text": "Making 'content' optional does not break the existing positional form: 'message post <channel> <text>' and 'message post <channel> --file a.png' and 'message post <channel> <text> --file a.png' all parse under argparse's nargs='?'.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c13",
+      "kind": "requirement",
+      "text": "Attachment failures route through the CliError contract: an unreadable or missing path fails before login, more than 10 files is rejected client-side, and a Discord 413 (size) is mapped to a typed error naming the size sent \u2014 each exits 1 with a remediation and no traceback reaches stderr.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h9",
+      "kind": "honesty",
+      "text": "The 10-attachment cap is a fixed, documented Discord limit we can assert client-side; the per-file size cap is guild-tier dependent and therefore cannot be named accurately without knowing the guild.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h10",
+      "kind": "honesty",
+      "text": "Mapping the 413 requires that discord.py surfaces an oversized upload as an HTTPException with status 413 (not a lower-level connection error mid-upload), so the existing handler chain in discord_client.run can name it.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c14",
+      "kind": "requirement",
+      "text": "--json on post/reply/thread-post includes the resulting attachment ids and URLs alongside the message id, so a caller can reference what it uploaded.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h3",
+      "kind": "honesty",
+      "text": "message.attachments is populated on the object returned by send()/reply() \u2014 i.e. Discord echoes the attachment metadata back on the create response, so no extra fetch is needed to report ids and URLs.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c15",
+      "kind": "requirement",
+      "text": "'channel messages' gains a time-window option (--after/--since) that pages past the 100-message cap, and its --json payload carries an explicit signal for whether the requested window was fully covered.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h4",
+      "kind": "honesty",
+      "text": "Paging with after= and limit=None is bounded in practice: a 90-day window on the busiest Jetson AI Lab channel completes in acceptable time and API budget, or the verb carries an explicit cap that surfaces as the coverage signal rather than running unbounded.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h5",
+      "kind": "honesty",
+      "text": "The coverage signal answers the question a caller actually has \u2014 'did I see every message in the window' \u2014 and is not merely 'did I hit --limit'.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c16",
+      "kind": "requirement",
+      "text": "_message_dict() gains author.bot and author.global_name, matching the fields 'user get' already returns.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h6",
+      "kind": "honesty",
+      "text": "Adding author.bot and author.global_name to _message_dict() is purely additive: no existing key is renamed or removed, so current consumers (including the human renderer's author.name) keep working.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h7",
+      "kind": "honesty",
+      "text": "A per-guild nick is only available when the message author is a guild Member; over channel.history() with Intents.none() and no member cache the author may be a plain User, so nick cannot be promised unconditionally.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c17",
+      "kind": "requirement",
+      "text": "'user get' takes one or more ids (varargs, plus --ids-file with '-' for stdin), resolves them all inside one discord_client.run() session, and always emits a JSON array \u2014 including for a single id. Resolution is tolerant per id: an unresolvable id yields an error entry instead of failing the batch.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h8",
+      "kind": "honesty",
+      "text": "One login can carry hundreds of fetch_user calls without tripping Discord's rate limits in a way that makes the batch slower or less reliable than the per-process form \u2014 discord.py's internal rate-limit handling is sufficient here.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c18",
+      "kind": "requirement",
+      "text": "The self-teaching surfaces stay true: explain/catalog.py entries, learn.py (_TEXT and _as_json_payload) and overview.py (_VERBS) all describe the new flags.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h23",
+      "kind": "honesty",
+      "text": "The three lists are genuinely un-generated from one another: catalog ENTRIES, learn.py's _TEXT/_as_json_payload, and overview.py's _VERBS are each independently authored, so no test catches prose that describes the old surface.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c19",
+      "kind": "boundary",
+      "text": "Zero runtime dependencies is unchanged: discord.File and everything else new stays behind discord_client.require_discord()'s lazy import under the [discord] extra. tests/test_no_runtime_deps.py still passes untouched.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h24",
+      "kind": "honesty",
+      "text": "The constraint holds under test, not just by inspection: tests/test_no_runtime_deps.py continues to pass unmodified, proving both dependencies == [] and no top-level third-party import anywhere in the package.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c20",
+      "kind": "boundary",
+      "text": "The one-shot, no-daemon contract holds. Batch id resolution is one login and one session, not a resident client or a gateway subscription; Intents.none() stays.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h25",
+      "kind": "honesty",
+      "text": "Batch resolution genuinely does not weaken the contract: no gateway subscription is opened, Intents.none() is unchanged, and the client is still closed in the finally, so nothing survives the process.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c24",
+      "kind": "success_signal",
+      "text": "sensibo-cli deletes its ~30-line urllib multipart webhook workaround and posts chart reports through 'message post --file' \u2014 a net removal of roughly 30 lines in the consumer, with 0 lines of transport code left there.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h26",
+      "kind": "honesty",
+      "text": "The claim is verified by the consumer, not by us: sensibo-cli reports its workaround deleted after adopting the flag. If it adopts and keeps the webhook path for an unrelated reason, this signal is not met and must not be reported as met.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c25",
+      "kind": "success_signal",
+      "text": "jetson-ai-lab-cli's participation report runs with 0 local re-implementations of these 4 seams, and a 90-day scan of a busy channel emits its coverage signal rather than silently returning exactly 100 messages.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h27",
+      "kind": "honesty",
+      "text": "'0 local re-implementations' is checked against jetson-ai-lab-cli's actual code after adoption, and the paging half is proven on a real channel with more than 100 messages in the window \u2014 a stubbed test cannot establish it.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c26",
+      "kind": "success_signal",
+      "text": "Resolving 200 user ids goes from 200 CLI invocations and 200 logins to 1 invocation and 1 login.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h28",
+      "kind": "honesty",
+      "text": "The 200:1 ratio is the real invocation count from the consumer's call site, not a theoretical maximum \u2014 i.e. the consumer genuinely batches rather than looping the batch form one id at a time.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c27",
+      "kind": "requirement",
+      "text": "The paged read must emit oldest-first regardless of whether a window was given: discord.py's history() sets oldest_first=True by default when after= is passed, so channel.py's existing unconditional collected.reverse() would silently flip a windowed read into newest-first \u2014 the opposite of the documented 'oldest first, the natural reading order' contract.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h29",
+      "kind": "honesty",
+      "text": "Ordering is asserted by test on both paths \u2014 a windowed read and a plain --limit read each prove oldest-first \u2014 so the fix cannot regress silently the way the current single-path coverage allows.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c28",
+      "kind": "requirement",
+      "text": "Every datetime handed to history() must be timezone-aware UTC. discord.py treats a NAIVE datetime as LOCAL time, so the confirmed q3 decision that a date-only '--since 2026-06-01' means midnight UTC is only true if the CLI attaches tzinfo itself.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h30",
+      "kind": "honesty",
+      "text": "The timezone test is genuinely independent of the developer's box: it forces a non-UTC TZ and shows the resulting window is identical to the UTC run, rather than passing merely because CI happens to run in UTC.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c29",
+      "kind": "requirement",
+      "text": "Attachment argument errors must be caught by the verb, not left to discord_client.run's handler chain: discord.File(path) raises OSError on an unreadable path and Messageable.send raises ValueError (files list too long) and TypeError \u2014 none of which are discord.* exceptions, so run()'s mapping misses them and they fall through to the generic catch-all, losing the typed remediation c13 promises.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h31",
+      "kind": "honesty",
+      "text": "Every non-discord exception the attachment path can raise is enumerated from the installed library's own signatures and Raises sections, not guessed \u2014 and each maps to a CliError with a remediation, verified by asserting the stderr contract in tests.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c30",
+      "kind": "requirement",
+      "text": "Before 0.6.0 is released, the two consumers that filed #13 and #14 are told about the breaking 'user get' array change \u2014 a comment on each issue naming the version and the new shape.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h32",
+      "kind": "honesty",
+      "text": "The notice actually reaches the consumers before they upgrade: it lands as a comment on their filed issues (#13/#14), not only as a CHANGELOG line neither repo reads.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c31",
+      "kind": "boundary",
+      "text": "--file performs an unsandboxed local read: any path the invoking process can open is uploaded to a third party. The CLI does not restrict paths, and it is not a confused-deputy guard \u2014 an agent handed a path uploads whatever is there. The operator owns which paths reach the flag.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h33",
+      "kind": "honesty",
+      "text": "The boundary is stated where an agent will actually see it \u2014 in 'explain message post' and the learn output, not only in this spec \u2014 since the CLI's self-teaching surface is what the next agent reads before using the flag.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c32",
+      "kind": "boundary",
+      "text": "Posting is irreversible on this surface: there is no delete verb, so every message and every attachment this CLI creates \u2014 including live-test artifacts in the sandbox channel \u2014 is permanent as far as this tool is concerned. Removal is a manual Discord action.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h34",
+      "kind": "honesty",
+      "text": "The live-test lane's write tests are pointed at a channel where permanent artifacts are acceptable (the #spark-tests sandbox), and the docs say so, since no cleanup path exists.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "c33",
+      "kind": "boundary",
+      "text": "An attachment URL returned in --json is a reference, not durable storage: discord.py documents that Attachment.url 404s once the message is deleted, and proxy_url may survive only minutes. Callers must not treat the URL as an archive of the file they uploaded.",
+      "deferred": false,
+      "deferred_reason": ""
+    },
+    {
+      "id": "h35",
+      "kind": "honesty",
+      "text": "The --json field is named and documented so it cannot be mistaken for durable storage, and the spec does not promise the URL keeps working after the message is deleted.",
+      "deferred": false,
+      "deferred_reason": ""
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "summary": "Widen tests/conftest.py fakes for every new surface",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "FakeChannel.send and FakeMessage.reply record a files= kwarg and still accept content-only calls, so existing tests pass unchanged",
+        "FakeMessage exposes .attachments with id/filename/url/size entries",
+        "FakeChannel.history accepts after=, limit=None and oldest_first=, and yields in the order those arguments imply rather than a fixed order",
+        "FakeClient.fetch_user can be told to raise NotFound/Forbidden for specific ids, so per-id batch tolerance is testable"
+      ],
+      "deps": [],
+      "covers": [],
+      "instruction": "Touches tests/conftest.py ONLY. Every other task in this plan depends on it, so it is the wave-1 serializer \u2014 landing it alone keeps later waves file-disjoint. Widening must be strictly additive: the 61 existing tests pass without edits."
+    },
+    {
+      "id": "t2",
+      "summary": "Add discord_bot_cli/cli/_commands/_attachments.py \u2014 the shared --file seam",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "add_file_flag(parser) registers a repeatable, order-preserving --file and makes the content positional nargs='?'",
+        "build_files(paths) returns discord.File objects in argument order, importing discord lazily via discord_client.require_discord()",
+        "a missing, unreadable, or directory path raises CliError(EXIT_USER_ERROR) with a remediation before any login happens \u2014 OSError never escapes",
+        "an 11th path raises CliError naming the 10-attachment Discord limit, so discord.py's own ValueError is never the path a user sees",
+        "content=None with zero files raises CliError; content=None with >=1 file is accepted",
+        "attachments_payload(message) maps message.attachments to [{id, filename, url, size}]",
+        "tests/test_no_runtime_deps.py passes unmodified, proving the new module has no top-level third-party import"
+      ],
+      "deps": [
+        "t1"
+      ],
+      "covers": [
+        "c12",
+        "h1",
+        "h2",
+        "c13",
+        "h9",
+        "h10",
+        "c14",
+        "h3",
+        "c29",
+        "h31",
+        "c19",
+        "h24"
+      ],
+      "instruction": "New file, disjoint from every existing module. Verified against discord.py 2.7.1: File.__init__ opens fp eagerly (OSError), send() raises ValueError for an over-long files list and TypeError on file/files conflicts \u2014 none are discord.* subclasses, so discord_client.run's handler chain does not map them. That is why the guard lives here, ahead of the transport."
+    },
+    {
+      "id": "t3",
+      "summary": "Add discord_bot_cli/cli/_commands/_timewindow.py \u2014 parse --since into an aware UTC datetime",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "an ISO 8601 timestamp with an offset parses to the equivalent UTC instant",
+        "a date-only '2026-06-01' parses to 2026-06-01T00:00:00+00:00 \u2014 midnight UTC, per the q3 decision",
+        "a duration '90d' (and h/w/m forms) resolves to now - delta as an aware UTC datetime",
+        "the returned datetime is ALWAYS tz-aware; a naive value can never be returned",
+        "the same input under TZ=America/New_York and TZ=UTC produces an identical instant \u2014 the test forces TZ, it does not rely on CI being UTC",
+        "garbage input raises CliError(EXIT_USER_ERROR) with a hint naming the three accepted forms"
+      ],
+      "deps": [
+        "t1"
+      ],
+      "covers": [
+        "c28",
+        "h30"
+      ],
+      "instruction": "New file, disjoint. This exists as its own module precisely because discord.py 2.7.1 documents 'if the datetime is naive, it is assumed to be local time' \u2014 the aware-UTC guarantee is the whole point, and it needs its own test file to prove the TZ independence."
+    },
+    {
+      "id": "t4",
+      "summary": "Wire --file into message post and message reply",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "message post <channel> <content> --file a.png --file b.png sends ONE message carrying both files, in that order",
+        "message post <channel> --file a.png (no content) succeeds",
+        "message post <channel> <text>, --file-only, and both-together all parse \u2014 the existing positional form is not broken by nargs='?'",
+        "message reply accepts --file with identical semantics",
+        "--json output includes the attachment ids and URLs alongside the message id",
+        "no companion webhook call or second command is issued: one invocation, one send"
+      ],
+      "deps": [
+        "t1",
+        "t2"
+      ],
+      "covers": [
+        "c3",
+        "h14",
+        "c7",
+        "h18",
+        "c33",
+        "h35"
+      ],
+      "instruction": "Touches discord_bot_cli/cli/_commands/message.py and tests/test_discord_message.py only. All plumbing comes from _attachments.py \u2014 this task adds no error handling of its own. Name the --json attachment field so it cannot be read as durable storage (c33: the URL 404s once the message is deleted)."
+    },
+    {
+      "id": "t5",
+      "summary": "Wire --file into thread post",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "thread post <thread_id> <content> --file a.png attaches the file to the message posted in the thread",
+        "thread post <thread_id> --file a.png (no content) succeeds",
+        "--json includes the attachment ids and URLs, matching message post's payload shape exactly"
+      ],
+      "deps": [
+        "t1",
+        "t2"
+      ],
+      "covers": [
+        "c12"
+      ],
+      "instruction": "Touches discord_bot_cli/cli/_commands/thread.py and tests/test_discord_thread.py only \u2014 file-disjoint from t4, so the two run in the same wave. The payload shape must match message post's byte for byte; a consumer should not need to branch on which verb produced it."
+    },
+    {
+      "id": "t6",
+      "summary": "Add the --since time window and coverage signal to channel messages",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "--since pages past the 100-message cap: a window over a channel with 250 messages returns all 250",
+        "output is oldest-first for BOTH a windowed read and a plain --limit read \u2014 the windowed path is asserted explicitly, not assumed",
+        "--limit alongside --since caps the walk; --json then reports the window as not fully covered and names what stopped it (limit vs window end)",
+        "the coverage signal is present on EVERY --json run, including fully-covered and non-windowed ones, so callers can assert on it unconditionally",
+        "--limit without --since keeps its existing 1-100 validation and CliError"
+      ],
+      "deps": [
+        "t1",
+        "t3"
+      ],
+      "covers": [
+        "c15",
+        "h4",
+        "h5",
+        "c27",
+        "h29",
+        "c4",
+        "h15",
+        "c8",
+        "h19"
+      ],
+      "instruction": "Touches discord_bot_cli/cli/_commands/channel.py and tests/test_discord_channel.py. THE TRAP (c27): discord.py 2.7.1 sets oldest_first=True by default when after= is given, so the existing unconditional collected.reverse() inverts a windowed read. Pass oldest_first explicitly or normalise after collection \u2014 and test both paths, because the current single-path coverage would let this ship green."
+    },
+    {
+      "id": "t7",
+      "summary": "Give user get a batch form",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "user get <id> <id> <id> resolves all three inside ONE discord_client.run session \u2014 assertable by counting run/login invocations",
+        "user get --ids-file ids.txt reads newline-delimited ids; --ids-file - reads them from stdin",
+        "--json ALWAYS emits an array, including for a single id",
+        "an unresolvable id yields an {id, error, remediation} entry and the process still exits 0 \u2014 the other ids still resolve",
+        "output order matches input order, for both --json and the human renderer",
+        "the human renderer emits one line per user, errors on their own line"
+      ],
+      "deps": [
+        "t1"
+      ],
+      "covers": [
+        "c17",
+        "h8",
+        "c6",
+        "h17",
+        "c10",
+        "h21",
+        "c20",
+        "h25"
+      ],
+      "instruction": "Touches discord_bot_cli/cli/_commands/user.py and tests/test_discord_user.py only. Per q6: exit 0 even when some ids fail. Per q8: input order is a documented guarantee, so do not parallelise resolution without a reordering buffer. Catch NotFound/Forbidden INSIDE the action loop \u2014 letting them reach discord_client.run would fail the whole batch."
+    },
+    {
+      "id": "t8",
+      "summary": "Add author.bot and author.global_name to _message_dict()",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "channel messages --json returns author.bot and author.global_name for every message",
+        "no existing key is renamed or removed; the human renderer's author.name output is byte-identical to before",
+        "neither field costs an extra fetch_user call \u2014 assertable by counting client calls against the fake",
+        "a stubbed FakeUser without global_name yields None rather than raising, matching the getattr defaults the module already uses"
+      ],
+      "deps": [
+        "t6"
+      ],
+      "covers": [
+        "c16",
+        "h6",
+        "h7",
+        "c5",
+        "h16",
+        "c9",
+        "h20"
+      ],
+      "instruction": "Touches discord_bot_cli/cli/_commands/channel.py \u2014 the SAME file as t6, which is why it depends on t6 rather than sharing its wave. The dependency is purely for file disjointness, not content. Do NOT promise a per-guild nick: over channel.history() with Intents.none() the author may be a plain User, not a Member (h7)."
+    },
+    {
+      "id": "t9",
+      "summary": "Map the Discord 413 into the CLI error contract",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "an HTTPException with status 413 raised during a send becomes a CliError naming the byte size that was sent and Discord's own message",
+        "the remediation names the boost-tier dependence rather than asserting a fixed limit",
+        "exit code is 1 and stderr carries the error:/hint: shape \u2014 asserted on the streams, not just the message text"
+      ],
+      "deps": [
+        "t2"
+      ],
+      "covers": [
+        "h10"
+      ],
+      "instruction": "Touches discord_bot_cli/discord_client.py and tests/test_discord_client.py. Per the q2 decision there is NO size pre-flight: only Discord knows the guild's real cap, so this is the whole size story. Slot the 413 case ahead of the generic HTTPException handler in the existing chain."
+    },
+    {
+      "id": "t10",
+      "summary": "Update the three hand-maintained self-teaching surfaces",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "explain/catalog.py documents --file on message post/reply and thread post, --since and the coverage signal on channel messages, and the batch + always-array shape on user get",
+        "learn.py _TEXT and _as_json_payload both list the new flags \u2014 the JSON payload is not left behind the prose",
+        "overview.py _VERBS shows the new signatures",
+        "the catalog states that --file is an unsandboxed local read and that an attachment URL is a reference, not storage",
+        "the catalog states that user get --json always emits an array, and that this changed in 0.6.0",
+        "test_every_catalog_path_resolves still passes"
+      ],
+      "deps": [
+        "t4",
+        "t5",
+        "t6",
+        "t7",
+        "t8"
+      ],
+      "covers": [
+        "c18",
+        "h23",
+        "c31",
+        "h33",
+        "c33"
+      ],
+      "instruction": "Touches explain/catalog.py, cli/_commands/learn.py and cli/_commands/overview.py. These three lists are hand-maintained and un-generated (CLAUDE.md 'Adding a command' step 4), so no test catches stale prose \u2014 the prose has to be read. Boundary c31 must land HERE, in what the next agent actually reads before using the flag, not only in the spec."
+    },
+    {
+      "id": "t11",
+      "summary": "Add the live-lane tests only a real Discord can prove",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "a gated live test uploads a real file via message post --file and asserts the returned attachment id and URL",
+        "a gated live test pages a window with more than 100 messages and asserts full coverage \u2014 the stub cannot establish this",
+        "both stay doubly gated: they self-skip unless DISCORD_LIVE_TESTS=1 and DISCORD_BOT_TOKEN are both set, so a routine pytest run never uploads",
+        "the docs state that these tests leave permanent artifacts and must point at the sandbox channel, since no delete verb exists"
+      ],
+      "deps": [
+        "t4",
+        "t6"
+      ],
+      "covers": [
+        "c32",
+        "h34",
+        "c25",
+        "h27"
+      ],
+      "instruction": "Touches tests/test_live_discord.py and the live-test prose in CLAUDE.md/README. Per memory: sandbox is #spark-tests in the JetsonBot experiments guild; #pull-requests blocks the bot. The paging test needs a channel with >100 messages inside the window or it proves nothing."
+    },
+    {
+      "id": "t12",
+      "summary": "Release 0.6.0: version, CHANGELOG, README",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "pyproject.toml is at 0.6.0 and uv sync has been re-run so whoami/overview report the new number",
+        "the CHANGELOG entry calls the user get array shape a BREAKING change explicitly, not just a change",
+        "README quickstart shows --file and --since usage",
+        "the version-check CI job passes (the version differs from main)"
+      ],
+      "deps": [
+        "t10"
+      ],
+      "covers": [
+        "c1",
+        "h11",
+        "h12"
+      ],
+      "instruction": "Touches pyproject.toml, CHANGELOG.md, README.md. Use the version-bump skill (minor \u2014 the breaking user get shape is what forces it above a patch). __version__ reads from installed metadata, so re-run uv sync or whoami will report the old number."
+    },
+    {
+      "id": "t13",
+      "summary": "Tell the two filing consumers about the breaking change",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "a comment lands on issue #13 and on issue #14 naming 0.6.0 and the new user get array shape",
+        "the comments state what each repo can now delete: sensibo-cli's urllib multipart webhook workaround, jetson-ai-lab-cli's four local seam re-implementations",
+        "each comment is signed '- discord-bot-cli (Claude)'",
+        "the success signals are recorded as UNVERIFIED until the consumers report back \u2014 adoption is their action, not ours"
+      ],
+      "deps": [
+        "t11",
+        "t12"
+      ],
+      "covers": [
+        "c30",
+        "h32",
+        "c2",
+        "h13",
+        "c11",
+        "h22",
+        "c24",
+        "h26",
+        "c26",
+        "h28"
+      ],
+      "instruction": "Route through the communicate skill (agtag-backed, auto-signs). This is the overlooked-actor finding c30: neither repo watches this CHANGELOG, and both would break silently on the array change. Per h26/h27/h28 the success signals are met only when the consumers report their workarounds deleted \u2014 do not mark them met from our side."
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "text": "t4 and t5 are file-disjoint and land in the same wave, but both must emit an IDENTICAL --json attachment payload shape. Built in parallel by two agents, they can diverge in field names or nesting and still pass their own acceptance criteria. The merge gate must diff the two payload shapes, not just run both test files.",
+      "kind": "unknown_nonblocking",
+      "task_id": "t5",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r2",
+      "text": "The scan window moves while it pages: messages posted during a long walk of a busy channel land inside the requested window after the walk passed that point. Whether the coverage signal should account for this, or the window should close at a fixed upper bound taken at start, is undecided (frame park v6).",
+      "kind": "unknown_nonblocking",
+      "task_id": "t6",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r3",
+      "text": "t1 is the wave-1 serializer every later task builds on. If the widened fakes encode the WRONG discord.py semantics \u2014 particularly history()'s oldest_first default flip \u2014 every downstream task's tests pass against a fake that lies, and the bug ships green anyway. The fakes' ordering behaviour must be checked against the real library docstring, not against what the tasks expect.",
+      "kind": "unknown_nonblocking",
+      "task_id": "t1",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r4",
+      "text": "The live paging test (t12) needs a sandbox channel holding more than 100 messages inside the test window. #spark-tests may not have that history, in which case the test proves nothing while appearing to pass. Confirm the channel's message count before relying on that lane for c25/h27.",
+      "kind": "unknown_nonblocking",
+      "task_id": "t12",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r5",
+      "text": "t13's success signals (c24/c25/c26) can only be met by the consumer repos reporting back. That is outside this plan's control and outside its timeline \u2014 the plan can complete with those signals still honestly unverified.",
+      "kind": "follow_up",
+      "task_id": "t13",
+      "resolved": false,
+      "resolution": ""
+    },
+    {
+      "id": "r6",
+      "text": "Whether Discord's CDN attachment URLs carry signed expiry parameters was NOT checked during the challenge pass (frame park v7). If they do, the --json URLs are shorter-lived than c33's '404s once the message is deleted' wording implies, and t10's documentation would understate it.",
+      "kind": "unknown_nonblocking",
+      "task_id": "t10",
+      "resolved": false,
+      "resolution": ""
+    }
+  ],
+  "obligations": []
+}
