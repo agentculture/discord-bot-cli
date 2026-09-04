@@ -75,6 +75,10 @@ Quoted verbatim from the `devague summary` skeleton:
 - live evidence: a real upload returned attachment id `1545483523270377482`, a working signed CDN url, `size: 39`
 - live evidence: `channel messages --since 3650d` returned **123 messages** oldest-first, `fully_covered: true`, `stopped_by: window_end`, in 2.5s
 - live finding: the attachment URL carries `?ex=`/`&is=`/`&hm=`, decoding to exactly **24h** of validity (issued 2026-09-04T17:19:45Z)
+- **live end-to-end run of issue #14's actual use case**: 9 readable text channels of guild `1413999242648748195` scanned with `--since 365d`, **13,797 messages**, `fully_covered: true` on 9/9
+- live: the largest single channel (`culture`) returned **10,607 messages** in one windowed walk — roughly 107 REST pages, against a pre-0.6.0 ceiling of 100
+- live: 8 of 10 distinct authors were bots, accounting for **13,776 of 13,797 messages (99.8%)** — the `author.bot` filter is what makes a participation ranking meaningful at all
+- live: 2 human ids piped on stdin resolved via `user get --ids-file -` in **1.25s, one login**; a bogus id returned an `{id, error, remediation}` entry beside a real result with **exit 0**
 - lint: `black --check`, `isort --check-only`, `flake8`, `bandit -c pyproject.toml -r discord_bot_cli` — all clean
 - lint: `teken cli doctor . --strict` — 26/26 passed, 0 errors
 - lint: `markdownlint-cli2` on README.md, CHANGELOG.md, CLAUDE.md — 0 errors
@@ -89,11 +93,11 @@ Quoted verbatim from the `devague summary` skeleton:
 | `--file` attaches multiple ordered files in one send across `message post`/`reply`/`thread post`, content optional | high | `e1` · merges `b28c209`, `1fb25d8` |
 | Attachment path/count errors exit 1 with a remediation before login; no `OSError`/`ValueError` escapes | high | `e2` · `tests/test_attachments.py` |
 | `--json` reports real attachment ids and URLs | high | `e15` — execution strength against real Discord: `test_live_message_post_with_file_upload` passed and a manual upload returned id `1545483523270377482`. Supersedes `e3`'s fidelity-only basis; risk `r8` closed |
-| A `--since` window pages past the 100-message cap and reports coverage on every `--json` run | high | `e16` — 123 real messages returned in one windowed walk, above the >100 precondition. Supersedes `e4`'s fake-only basis; risk `r7` closed. `r9` (CI wiring) still open |
+| A `--since` window pages past the 100-message cap and reports coverage on every `--json` run | high | `e21` — **sensitivity** strength: 10,607 messages in a single walk across a 9-channel, 13,797-message live sweep, `fully_covered` true on all 9. A broken pager cannot fake that from a 100-cap. Supersedes `e4`/`e16`; `r7` closed, `r9` (CI wiring) open |
 | Output is oldest-first on both the windowed and plain paths | high | `e8` · `test_windowed_and_plain_reads_are_both_oldest_first`, plus an independent end-to-end CLI run at the merge gate |
 | `--since` always yields a tz-aware UTC instant, identical under any host TZ | high | `e9` · forced-TZ tests, plus independent verification under UTC / America/New_York / Asia/Kolkata |
-| `author.bot` and `author.global_name` ship with no extra `fetch_user` call | high | `e5` · `test_channel_messages_author_fields_cost_no_extra_fetch_user_call` |
-| `user get` resolves a batch in one login, always emits an array, exits 0 on per-id failure, preserves input order | high | `e6` · `tests/test_discord_user.py` · merge `06569f7` |
+| `author.bot` and `author.global_name` ship with no extra `fetch_user` call | high | `e20` — **sensitivity** strength: live, bots were 99.8% of 13,797 messages, so without the flag the ranking this feature exists to produce would have been almost entirely noise. Supersedes `e5` |
+| `user get` resolves a batch in one login, always emits an array, exits 0 on per-id failure, preserves input order | high | `e19` — **sensitivity** strength: resolved from stdin in 1.25s/one login live, and a bogus id returned an error entry beside a real result with exit 0 against real Discord. Supersedes `e6` |
 | Zero runtime dependencies is unchanged | high | `e7` · `tests/test_no_runtime_deps.py` passing **unmodified** |
 | A 413 maps to the CLI error contract, naming the boost-tier dependence **and the byte size sent** | medium | `e18` — supersedes `e10`. Size threaded from `_attachments.upload_bytes`; nothing gates on it, asserted by `test_upload_bytes_is_reported_not_gated`. Still never exercised against a **real** oversized upload, which is why this is not `high` |
 | `explain`/`learn`/`overview` describe the shipped surface | medium | `e11` — fidelity only; **no automated test asserts prose accuracy**, which is how the missing `--ids-file` entry was caught by hand |
@@ -101,8 +105,8 @@ Quoted verbatim from the `devague summary` skeleton:
 | Live-test artifacts are documented as permanent | medium | `e13` · CLAUDE.md, README.md |
 | An attachment URL is documented as a signed link expiring ~24h **and** 404ing on delete | high | `e17` — park `v7` answered live: the URL carries signed expiry decoding to exactly 24h. The earlier wording **did** understate it and was corrected in `catalog.py`, `learn.py` and `README.md` (delta `b6`) |
 | sensibo-cli can delete its webhook multipart workaround | unverified | Consumer-side outcome; not told yet (`t13` blocked) |
-| jetson-ai-lab-cli's report runs with no local seam re-implementations | unverified | Consumer-side outcome; not told yet (`t13` blocked) |
-| Resolving 200 ids costs 1 invocation and 1 login | unverified | Architecturally true and unit-asserted, but never measured against a real 200-id scan |
+| jetson-ai-lab-cli's report runs with no local seam re-implementations | unverified | Consumer-side outcome; not told yet (`t13` blocked). **The pipeline it describes was however run end to end here** (`e19`–`e21`), so the capability is demonstrated even though adoption is not |
+| Resolving many ids costs 1 invocation and 1 login | medium | `e19` — measured live at 1 invocation / 1 login, but with 2 ids, not 200. The per-login saving is proven; the scaling claim is not |
 
 **Lapse ledger evidence.** `l1` (approved, `control-absent`): during `/scope`,
 9 candidate surfaces were explored inline where the skill mandates fanning out
@@ -121,4 +125,5 @@ in the *completeness* of the scope survey, not in any individual finding.
 - Open frame parks `v2` (`--before` scope) and `v3` (per-guild `nick`) remain deliberately deferred.
 - The `m` = months (30-day) duration unit is a judgement call that shipped; dropping `m` or renaming it `mo` is a one-line change in `_timewindow.py`.
 - The live lane leaves **permanent artifacts** in `#spark-tests` — this run added a write chain, a thread, reactions and two file uploads. There is no `delete` verb.
+- `r10` — scanning N channels costs N processes and N logins (the live 13-channel sweep took over two minutes). Structurally the same complaint #14 raised about `user get`, one level up, and **not** fixed by this increment. jetson-ai-lab-cli targets ~134 channels and will hit it immediately; worth telling them alongside `t13`.
 - No PR opened yet — human gate 3.
