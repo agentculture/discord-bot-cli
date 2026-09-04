@@ -35,7 +35,8 @@ def test_user_get_text(fake_discord: FakeClient, capsys: pytest.CaptureFixture[s
     rc = main(["user", "get", "42"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "alice" in out and "42" in out
+    assert "alice" in out
+    assert "42" in out
 
 
 def test_user_get_bad_id(fake_discord: FakeClient, capsys: pytest.CaptureFixture[str]) -> None:
@@ -192,3 +193,26 @@ def test_user_get_text_one_line_per_user_errors_on_own_line(
     assert "alice" in lines[0]
     assert "99" in lines[1]
     assert "error" in lines[1].lower() or "not found" in lines[1].lower()
+
+
+def test_ids_file_with_invalid_utf8_is_a_clean_cli_error(tmp_path, capsys) -> None:
+    """A readable but non-UTF-8 file must not escape as UnicodeDecodeError (Qodo #6)."""
+    bad = tmp_path / "ids.bin"
+    bad.write_bytes(b"\xff\xfe\x00binary")
+    rc = main(["user", "get", "--ids-file", str(bad)])
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert "UTF-8" in err
+    assert "hint:" in err
+    assert "Traceback" not in err
+
+
+def test_batch_error_line_carries_its_remediation_on_one_line(fake_discord, capsys) -> None:
+    """The entry's remediation is surfaced, without breaking one-line-per-id (Qodo #3)."""
+    fake_discord.fail_user(999, "not_found")
+    rc = main(["user", "get", "42", "999"])
+    out = capsys.readouterr().out.strip().splitlines()
+    assert rc == 0
+    assert len(out) == 2, out
+    assert "error:" in out[1]
+    assert "hint:" in out[1]

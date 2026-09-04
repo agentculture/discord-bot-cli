@@ -33,6 +33,7 @@ from discord_bot_cli.cli._commands._attachments import (
     add_file_flag,
     attachments_payload,
     build_files,
+    close_files,
     require_content_or_files,
     upload_bytes,
 )
@@ -66,7 +67,12 @@ def cmd_message_post(args: argparse.Namespace) -> int:
             "attachments": attachments_payload(message),
         }
 
-    result = discord_client.run(action, upload_bytes=sent_bytes)
+    try:
+        result = discord_client.run(action, upload_bytes=sent_bytes)
+    finally:
+        # discord.File opens eagerly, so a failure between build_files()
+        # and Discord consuming them would leak descriptors.
+        close_files(files)
     _emit(result, f"posted message {result['id']}", json_mode=bool(getattr(args, "json", False)))
     return 0
 
@@ -89,7 +95,12 @@ def cmd_message_reply(args: argparse.Namespace) -> int:
             "attachments": attachments_payload(reply),
         }
 
-    result = discord_client.run(action, upload_bytes=sent_bytes)
+    try:
+        result = discord_client.run(action, upload_bytes=sent_bytes)
+    finally:
+        # discord.File opens eagerly, so a failure between build_files()
+        # and Discord consuming them would leak descriptors.
+        close_files(files)
     _emit(
         result, f"replied with message {result['id']}", json_mode=bool(getattr(args, "json", False))
     )

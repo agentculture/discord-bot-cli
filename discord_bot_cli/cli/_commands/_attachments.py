@@ -32,6 +32,7 @@ documented 10-files-per-message limit is asserted client-side.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 from typing import Any
 
@@ -98,12 +99,35 @@ def build_files(paths: list[str]) -> list[Any]:
         for path in paths:
             files.append(discord.File(path, filename=os.path.basename(path)))
     except OSError as exc:
+        # Close whatever we already opened: a failure on the 5th path must not
+        # leak the first four handles.
+        close_files(files)
         raise CliError(
             code=EXIT_USER_ERROR,
             message=f"could not open attachment {path!r}: {exc}",
             remediation="check the path exists, is a regular file, and is readable",
         ) from exc
     return files
+
+
+def close_files(files: list[Any]) -> None:
+    """Close every opened ``discord.File``, ignoring files already closed.
+
+    ``discord.File`` opens its path eagerly, so a verb that builds files and
+    then fails before Discord consumes them (a bad token, a failed login, an
+    unknown channel) would otherwise leak descriptors. The process usually
+    exits straight afterwards, but ``main()`` is also called in-process by the
+    test suite and by embedding callers, where the leak is real.
+    """
+    for file in files:
+        closer = getattr(file, "close", None)
+        if closer is None:
+            continue
+        # Suppress only OSError: closing a file object can fail on a broken
+        # descriptor, and cleanup must never mask the real error that sent us
+        # here. Anything else is a genuine bug and should surface.
+        with contextlib.suppress(OSError):
+            closer()
 
 
 def upload_bytes(paths: list[str]) -> int | None:

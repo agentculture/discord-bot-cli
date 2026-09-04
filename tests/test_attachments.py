@@ -170,3 +170,28 @@ def test_upload_bytes_is_none_without_files() -> None:
 def test_upload_bytes_is_none_rather_than_raising_on_a_vanished_path(tmp_path) -> None:
     """A missing number must never turn a size error into a different error."""
     assert _attachments.upload_bytes([str(tmp_path / "gone.bin")]) is None
+
+
+def test_build_files_opens_handles_that_close_files_then_releases(tmp_path) -> None:
+    """Every handle build_files opens is closable, and close_files releases them.
+
+    The leak Qodo flagged (#5) is descriptors surviving a failure between
+    build_files() and Discord consuming them; the verbs now close in a finally.
+    """
+    good = tmp_path / "good.bin"
+    good.write_bytes(b"x" * 10)
+    files = _attachments.build_files([str(good), str(good)])
+    assert len(files) == 2
+    assert not any(f.fp.closed for f in files)
+    _attachments.close_files(files)
+    assert all(f.fp.closed for f in files)
+
+
+def test_close_files_is_idempotent_and_tolerates_junk() -> None:
+    """Cleanup must never raise — it runs in a finally, masking nothing."""
+
+    class _Boom:
+        def close(self):
+            raise OSError("already gone")
+
+    _attachments.close_files([_Boom(), object()])  # must not raise

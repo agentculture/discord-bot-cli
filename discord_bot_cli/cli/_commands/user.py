@@ -58,6 +58,14 @@ def _read_ids_file(path: str) -> list[str]:
                 message=f"cannot read --ids-file {path!r}: {exc}",
                 remediation="check the path is correct and readable, or pass '-' for stdin",
             ) from exc
+        except UnicodeDecodeError as exc:
+            # Not an OSError: a readable file holding non-UTF-8 bytes would
+            # otherwise escape the CliError contract as an unexpected error.
+            raise CliError(
+                code=EXIT_USER_ERROR,
+                message=f"--ids-file {path!r} is not valid UTF-8 text: {exc}",
+                remediation="pass a UTF-8 text file with one numeric id per line",
+            ) from exc
     return [line.strip() for line in content.splitlines() if line.strip()]
 
 
@@ -86,7 +94,16 @@ def _error_entry(user_id: int, exc: BaseException) -> dict[str, object]:
 
 def _format_entry(entry: dict[str, object]) -> str:
     if "error" in entry:
-        return f"{entry['id']}  error: {entry['error']}"
+        # Per-id failures are RESULTS (stdout, exit 0), not the CliError
+        # contract — but the remediation is already recorded, so dropping it
+        # would leave a reader with a bare failure and no way forward.
+        # Kept on ONE physical line: the confirmed contract for this renderer
+        # is one line per id, errors on their own line. A second line would
+        # match the rubric's error:/hint: shape but break that guarantee, so
+        # the hint rides along inline instead.
+        line = f"{entry['id']}  error: {entry['error']}"
+        remediation = entry.get("remediation")
+        return f"{line} (hint: {remediation})" if remediation else line
     return (
         f"{entry['id']}  {entry['username']} "
         f"(global_name={entry['global_name']}, bot={entry['bot']})"

@@ -77,8 +77,9 @@ def test_thread_send_accepts_files() -> None:
 def test_send_does_not_silently_accept_more_than_ten_files() -> None:
     """discord.py raises a builtin ``ValueError`` for >10 files; so must the fake."""
     channel = FakeClient().channel
+    send = channel.send("too many", files=[object()] * 11)
     with pytest.raises(ValueError):
-        asyncio.run(channel.send("too many", files=[object()] * 11))
+        asyncio.run(send)
 
 
 # --- criterion 2: attachments ----------------------------------------------
@@ -182,8 +183,9 @@ def test_fetch_user_can_be_told_to_raise_not_found() -> None:
     not_found, _ = discord_errors()
     client = FakeClient()
     client.fail_user(99, "not_found")
+    lookup = client.fetch_user(99)
     with pytest.raises(not_found):
-        asyncio.run(client.fetch_user(99))
+        asyncio.run(lookup)
     # other ids still resolve — that is what makes per-id batch tolerance testable
     assert asyncio.run(client.fetch_user(42)).name == "alice"
 
@@ -192,16 +194,18 @@ def test_fetch_user_can_be_told_to_raise_forbidden() -> None:
     _, forbidden = discord_errors()
     client = FakeClient()
     client.fail_user(7, "forbidden")
+    lookup = client.fetch_user(7)
     with pytest.raises(forbidden):
-        asyncio.run(client.fetch_user(7))
+        asyncio.run(lookup)
 
 
 def test_fail_user_accepts_an_explicit_exception() -> None:
     client = FakeClient()
     boom = RuntimeError("boom")
     client.fail_user(5, boom)
+    lookup = client.fetch_user(5)
     with pytest.raises(RuntimeError):
-        asyncio.run(client.fetch_user(5))
+        asyncio.run(lookup)
 
 
 def test_discord_errors_are_the_real_types_when_installed() -> None:

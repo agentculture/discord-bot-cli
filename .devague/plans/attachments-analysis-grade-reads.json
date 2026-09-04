@@ -5,7 +5,7 @@
   "schema_version": 5,
   "status": "exported",
   "created": "2026-09-04T16:03:33Z",
-  "updated": "2026-09-04T18:06:24Z",
+  "updated": "2026-09-04T18:41:57Z",
   "targets": [
     {
       "id": "c1",
@@ -821,8 +821,8 @@
       "text": "t13's success signals (c24/c25/c26) can only be met by the consumer repos reporting back. That is outside this plan's control and outside its timeline \u2014 the plan can complete with those signals still honestly unverified.",
       "kind": "follow_up",
       "task_id": "t13",
-      "resolved": false,
-      "resolution": ""
+      "resolved": true,
+      "resolution": "t13 delivered: notices posted to #13 (issuecomment-5544985751) and #14 (issuecomment-5544991170), aggregate figures only, no usernames or message content per the user's constraint. Success signals c24/c25/c26 remain UNVERIFIED \u2014 adoption is the consumers' action, not ours."
     },
     {
       "id": "r6",

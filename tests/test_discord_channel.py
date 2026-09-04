@@ -29,7 +29,8 @@ def test_channel_list_text(fake_discord: FakeClient, capsys: pytest.CaptureFixtu
     rc = main(["channel", "list", "777"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "general" in out and "random" in out
+    assert "general" in out
+    assert "random" in out
 
 
 def test_channel_messages_oldest_first(

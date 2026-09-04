@@ -67,10 +67,20 @@ def parse_since(value: str) -> datetime:
 
     duration_match = _DURATION_RE.match(text)
     if duration_match:
-        count = int(duration_match.group(1))
         unit = duration_match.group(2)
-        delta = _UNIT_TO_TIMEDELTA[unit](count)
-        return datetime.now(timezone.utc) - delta
+        try:
+            count = int(duration_match.group(1))
+            delta = _UNIT_TO_TIMEDELTA[unit](count)
+            return datetime.now(timezone.utc) - delta
+        except (ValueError, OverflowError) as exc:
+            # The digit run is unbounded, so int()/timedelta()/subtraction can
+            # all blow up on something like '99999999999999999999d'. That is
+            # invalid user input, not an internal bug — keep the format hint.
+            raise CliError(
+                EXIT_USER_ERROR,
+                f"--since duration {value!r} is out of range.",
+                _HINT,
+            ) from exc
 
     if _DATE_ONLY_RE.match(text):
         try:

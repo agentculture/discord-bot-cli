@@ -141,3 +141,11 @@ def test_empty_value_raises_cli_error() -> None:
         parse_since("   ")
 
     assert exc_info.value.code == EXIT_USER_ERROR
+
+
+def test_absurd_duration_is_a_user_error_not_an_internal_bug() -> None:
+    """An unbounded digit run must not escape as OverflowError (Qodo #7)."""
+    with pytest.raises(CliError) as exc:
+        parse_since("99999999999999999999999999d")
+    assert exc.value.code == EXIT_USER_ERROR
+    assert exc.value.remediation

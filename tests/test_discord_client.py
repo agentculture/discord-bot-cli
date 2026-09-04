@@ -172,7 +172,8 @@ def test_run_maps_discord_exceptions(patched_run: None, exc_factory, expected_co
         discord_client.run(action)
     assert exc.value.code == expected_code
     assert needle in exc.value.message
-    assert _FakeClient.last is not None and _FakeClient.last.closed is True
+    assert _FakeClient.last is not None
+    assert _FakeClient.last.closed is True
 
 
 # --- HTTP 413 (payload too large) -----------------------------------------
@@ -200,7 +201,8 @@ def test_run_maps_413_to_cli_error_naming_discord_message(patched_run: None) -> 
     assert exc.value.code == EXIT_USER_ERROR
     assert "413" in exc.value.message
     assert "Request entity too large" in exc.value.message
-    assert _FakeClient.last is not None and _FakeClient.last.closed is True
+    assert _FakeClient.last is not None
+    assert _FakeClient.last.closed is True
 
 
 def test_413_remediation_names_boost_tier_not_a_fixed_limit(patched_run: None) -> None:

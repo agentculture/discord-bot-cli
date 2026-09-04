@@ -103,7 +103,8 @@ def test_live_user_get(capsys: pytest.CaptureFixture[str]) -> None:
     rc, payload = _run(["user", "get", _USER], capsys)
     assert rc == 0, payload
     # 0.6.0: --json is ALWAYS an array, even for a single id.
-    assert isinstance(payload, list) and len(payload) == 1, payload
+    assert isinstance(payload, list), payload
+    assert len(payload) == 1, payload
     assert payload[0]["id"] == _USER
     assert "username" in payload[0]
 
@@ -113,7 +114,8 @@ def test_live_channel_list(capsys: pytest.CaptureFixture[str]) -> None:
     rc, payload = _run(["channel", "list", _GUILD], capsys)
     assert rc == 0, payload
     assert payload["guild_id"] == _GUILD
-    assert isinstance(payload["channels"], list) and payload["channels"]
+    assert isinstance(payload["channels"], list)
+    assert payload["channels"]
     for ch in payload["channels"]:
         assert {"id", "name", "type"} <= ch.keys()
 
@@ -138,7 +140,8 @@ def test_live_write_chain(capsys: pytest.CaptureFixture[str]) -> None:
         capsys,
     )
     assert rc == 0, posted
-    assert posted["id"] and posted["channel_id"] == _CHANNEL
+    assert posted["id"]
+    assert posted["channel_id"] == _CHANNEL
 
     rc, reply = _run(
         ["message", "reply", _CHANNEL, posted["id"], f"live test {tag} — reply"], capsys
@@ -196,19 +199,23 @@ def test_live_message_post_with_file_upload(tmp_path, capsys: pytest.CaptureFixt
         capsys,
     )
     assert rc == 0, posted
-    assert posted["id"] and posted["channel_id"] == _CHANNEL
+    assert posted["id"]
+    assert posted["channel_id"] == _CHANNEL
 
     attachments = posted["attachments"]
-    assert isinstance(attachments, list) and len(attachments) == 1, posted
+    assert isinstance(attachments, list), posted
+    assert len(attachments) == 1, posted
     attachment = attachments[0]
 
     # The id is a real Discord snowflake: a non-empty run of digits.
-    assert attachment["id"] and attachment["id"].isdigit(), attachment
+    assert attachment["id"], attachment
+    assert attachment["id"].isdigit(), attachment
     # The URL is a real, fetchable CDN link, not a placeholder.
     assert attachment["url"].startswith("https://"), attachment
     assert file_path.name in attachment["url"], attachment
     assert attachment["filename"] == file_path.name, attachment
-    assert isinstance(attachment["size"], int) and attachment["size"] > 0, attachment
+    assert isinstance(attachment["size"], int), attachment
+    assert attachment["size"] > 0, attachment
 
 
 @_needs_channel
