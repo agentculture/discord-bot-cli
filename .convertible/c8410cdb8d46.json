@@ -1,0 +1,18 @@
+{
+  "task_id": "c8410cdb8d46",
+  "status": "error",
+  "summary": "aborted after 0 step(s): HTTPError: HTTP Error 404: Not Found",
+  "changed_files": [],
+  "steps": [],
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "artifacts_path": ".convertible/c8410cdb8d46.json",
+  "error": "HTTPError: HTTP Error 404: Not Found",
+  "branch": null,
+  "pr_url": null,
+  "hook_firings": [],
+  "command": null
+}

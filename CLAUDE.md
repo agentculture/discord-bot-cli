@@ -31,13 +31,22 @@ uv run pytest -n auto --cov=discord_bot_cli --cov-report=term   # coverage (repo
 instead of the stubbed seam. They are **doubly gated** — they self-skip unless
 **both** `DISCORD_LIVE_TESTS=1` and `DISCORD_BOT_TOKEN` are set — so a routine
 `uv run pytest` never logs in or posts, even on a box with a token exported (the
-default run *collects* them and reports them skipped). The write tests POST to
-`DISCORD_TEST_CHANNEL_ID`, and there is no `delete` verb yet, so point it at a
-sandbox channel. Run them with:
+default run *collects* them and reports them skipped). **These tests leave
+permanent artifacts.** There is no `delete` verb, so every message, reply,
+reaction, thread, and file attachment they create (including a real
+`message post --file` upload) stays in the target channel forever as far as
+this tool is concerned — `DISCORD_TEST_CHANNEL_ID` must point at a disposable
+sandbox channel, never a real one. The paging-coverage test additionally needs
+`DISCORD_TEST_PAGING_SINCE`, a `--since` window known to cover more than 100
+messages in that channel — the 100-message-per-request cap can only be proven
+against real Discord, and the test fails loudly (not a silent skip) if the
+window turns out to hold 100 messages or fewer, so a green result always means
+paging was really exercised. Run them with:
 
 ```bash
 DISCORD_LIVE_TESTS=1 \
 DISCORD_TEST_GUILD_ID=...  DISCORD_TEST_CHANNEL_ID=...  DISCORD_TEST_USER_ID=... \
+DISCORD_TEST_PAGING_SINCE=365d \
 uv run pytest -m live -v
 ```
 
@@ -46,6 +55,9 @@ Remotely they run from `.github/workflows/live-tests.yml` (manual
 `DISCORD_BOT_TOKEN` repo **secret**; the ids come from repo **variables**
 (`DISCORD_TEST_GUILD_ID` / `_CHANNEL_ID` / `_USER_ID`, defaulting to the
 experiments sandbox). The job no-ops on forks and token-less repos.
+`DISCORD_TEST_PAGING_SINCE` is not yet wired into that workflow as a repo
+variable, so the paging-coverage test self-skips in CI today; set it locally
+to exercise that test.
 
 Lint/format — the CI `lint` job runs all of these and **fails on any**:
 

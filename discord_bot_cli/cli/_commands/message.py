@@ -2,15 +2,26 @@
 
 Verbs:
 
-* ``message post <channel_id> <content>`` — post a message; returns its id.
-* ``message reply <channel_id> <message_id> <content>`` — reply with a
-  message_reference to the target.
+* ``message post <channel_id> [content] [--file PATH]...`` — post a message,
+  optionally with one or more local file attachments; returns its id.
+* ``message reply <channel_id> <message_id> [content] [--file PATH]...`` —
+  reply with a message_reference to the target, optionally with attachments.
 * ``message react <channel_id> <message_id> <emoji>`` — add a reaction.
 * ``message overview`` — describe this noun.
 
+``content`` is optional on ``post``/``reply`` as long as at least one
+``--file`` is given — Discord allows a file-only message, but never a
+completely empty one (see
+:func:`discord_bot_cli.cli._commands._attachments.require_content_or_files`).
+``--file`` is repeatable (up to 10, Discord's per-message limit) and
+order-preserving; all files attach to the single message sent, no companion
+call is made.
+
 ``post``/``reply`` emit the created message id so an agent can feed it into the
-next verb. All Discord I/O routes through
-:func:`discord_bot_cli.discord_client.run`.
+next verb, plus an ``attachments`` list (id/filename/url/size per file) built
+by :func:`discord_bot_cli.cli._commands._attachments.attachments_payload` —
+note the URL 404s once the message is deleted, it is not durable storage. All
+Discord I/O routes through :func:`discord_bot_cli.discord_client.run`.
 """
 
 from __future__ import annotations
@@ -18,12 +29,22 @@ from __future__ import annotations
 import argparse
 
 from discord_bot_cli import discord_client
+from discord_bot_cli.cli._commands._attachments import (
+    add_file_flag,
+    attachments_payload,
+    build_files,
+    close_files,
+    require_content_or_files,
+    upload_bytes,
+)
 from discord_bot_cli.cli._commands._discord_common import add_json, emit_noun_overview
 from discord_bot_cli.cli._output import emit_result
 
 _VERBS = [
-    "message post <channel_id> <content> — post a message",
-    "message reply <channel_id> <message_id> <content> — reply to a message",
+    "message post <channel_id> [content] [--file PATH]... — post a message, "
+    "optionally with attachments",
+    "message reply <channel_id> <message_id> [content] [--file PATH]... — reply "
+    "to a message, optionally with attachments",
     "message react <channel_id> <message_id> <emoji> — add a reaction",
     "message overview — describe this noun (this command)",
 ]
@@ -33,13 +54,25 @@ _CHANNEL_ID_HELP = "Numeric channel id."
 
 def cmd_message_post(args: argparse.Namespace) -> int:
     channel_id = discord_client.parse_id(args.channel_id, "channel_id")
+    require_content_or_files(args.content, args.file)
+    files = build_files(args.file)
+    sent_bytes = upload_bytes(args.file)
 
     async def action(client: object) -> dict[str, object]:
         channel = await client.fetch_channel(channel_id)
-        message = await channel.send(args.content)
-        return {"id": str(message.id), "channel_id": str(channel_id)}
+        message = await channel.send(args.content, files=files or None)
+        return {
+            "id": str(message.id),
+            "channel_id": str(channel_id),
+            "attachments": attachments_payload(message),
+        }
 
-    result = discord_client.run(action)
+    try:
+        result = discord_client.run(action, upload_bytes=sent_bytes)
+    finally:
+        # discord.File opens eagerly, so a failure between build_files()
+        # and Discord consuming them would leak descriptors.
+        close_files(files)
     _emit(result, f"posted message {result['id']}", json_mode=bool(getattr(args, "json", False)))
     return 0
 
@@ -47,18 +80,27 @@ def cmd_message_post(args: argparse.Namespace) -> int:
 def cmd_message_reply(args: argparse.Namespace) -> int:
     channel_id = discord_client.parse_id(args.channel_id, "channel_id")
     message_id = discord_client.parse_id(args.message_id, "message_id")
+    require_content_or_files(args.content, args.file)
+    files = build_files(args.file)
+    sent_bytes = upload_bytes(args.file)
 
     async def action(client: object) -> dict[str, object]:
         channel = await client.fetch_channel(channel_id)
         target = await channel.fetch_message(message_id)
-        reply = await target.reply(args.content)
+        reply = await target.reply(args.content, files=files or None)
         return {
             "id": str(reply.id),
             "channel_id": str(channel_id),
             "in_reply_to": str(message_id),
+            "attachments": attachments_payload(reply),
         }
 
-    result = discord_client.run(action)
+    try:
+        result = discord_client.run(action, upload_bytes=sent_bytes)
+    finally:
+        # discord.File opens eagerly, so a failure between build_files()
+        # and Discord consuming them would leak descriptors.
+        close_files(files)
     _emit(
         result, f"replied with message {result['id']}", json_mode=bool(getattr(args, "json", False))
     )
@@ -105,14 +147,14 @@ def register(sub: argparse._SubParsersAction) -> None:
 
     pp = noun_sub.add_parser("post", help="Post a message to a channel.")
     pp.add_argument("channel_id", help=_CHANNEL_ID_HELP)
-    pp.add_argument("content", help="Message text.")
+    add_file_flag(pp)
     add_json(pp)
     pp.set_defaults(func=cmd_message_post)
 
     pr = noun_sub.add_parser("reply", help="Reply to a message.")
     pr.add_argument("channel_id", help=_CHANNEL_ID_HELP)
     pr.add_argument("message_id", help="Numeric id of the message to reply to.")
-    pr.add_argument("content", help="Reply text.")
+    add_file_flag(pr)
     add_json(pr)
     pr.set_defaults(func=cmd_message_reply)
 

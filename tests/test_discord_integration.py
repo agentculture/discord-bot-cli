@@ -42,7 +42,7 @@ def test_full_compose_flow(fake_discord: FakeClient, capsys: pytest.CaptureFixtu
 
     # people
     user = _run(["user", "get", "42"], capsys)
-    assert user["username"] == "alice"
+    assert user[0]["username"] == "alice"
 
     # every documented endpoint was exercised on the fake client
     client_methods = {name for name, *_ in fake_discord.calls}

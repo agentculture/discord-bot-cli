@@ -35,13 +35,20 @@ _VERBS = [
 # Discord domain verbs (need $DISCORD_BOT_TOKEN + the [discord] extra; one-shot).
 _DISCORD_VERBS = [
     "channel list <guild_id> — list a guild's channels",
-    "channel messages <channel_id> [--limit N] — read the last N messages",
-    "message post <channel_id> <content> — post a message",
-    "message reply <channel_id> <message_id> <content> — reply to a message",
+    "channel messages <channel_id> [--limit N] — read the last N messages, oldest first",
+    "channel messages <channel_id> --since W [--limit N] — read a time window, paging "
+    "past the 100-message cap (--limit becomes a safety ceiling); --json carries a "
+    "window coverage signal",
+    "message post <channel_id> [content] [--file PATH]... — post a message, "
+    "optionally with local file attachments (unsandboxed read, up to 10)",
+    "message reply <channel_id> <message_id> [content] [--file PATH]... — reply to a "
+    "message, optionally with attachments",
     "message react <channel_id> <message_id> <emoji> — add a reaction",
     "thread create <channel_id> --name <name> [--message <id>] — create a thread",
-    "thread post <thread_id> <content> — post into a thread",
-    "user get <user_id> — look up a user",
+    "thread post <thread_id> [content] [--file PATH]... — post into a thread, "
+    "optionally with attachments",
+    "user get <user_id> [<user_id> ...] [--ids-file <path>|-] — look up one or more "
+    "users, in input order; --json is always an array",
 ]
 
 

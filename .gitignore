@@ -226,3 +226,6 @@ skills.local.yaml
 
 # colleague (ask-colleague) bookkeeping — never tracked
 .colleague/
+
+# devague working state (not committed by default)
+.devague/reviews/

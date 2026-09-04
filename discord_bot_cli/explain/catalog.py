@@ -141,13 +141,30 @@ Read a guild's channels and a channel's messages.
 
 - `discord-bot-cli channel list <guild_id>` — list a guild's channels.
 - `discord-bot-cli channel messages <channel_id> [--limit N]` — read the last
-  N messages (1-100, default 20), oldest first.
+  N messages (1-100, default 20), oldest first (so the newest is last).
+- `discord-bot-cli channel messages <channel_id> --since <when> [--limit N]` —
+  read every message newer than `<when>` (an ISO 8601 timestamp, a date-only
+  `YYYY-MM-DD` meaning midnight UTC, or a duration like `90d`, units
+  h/d/w/m where m is months). This pages past the 100-message cap; with
+  `--since`, `--limit` becomes a safety ceiling on the walk, not a page size.
 - `discord-bot-cli channel overview` — describe this noun.
+
+## The `window` coverage signal
+
+Every `--json` run of `channel messages` — plain or windowed — carries a
+`window` object: `{"since", "limit", "message_count", "fully_covered",
+"stopped_by"}`. `stopped_by` is one of `"limit"` (the ceiling cut the walk
+short), `"window_end"` (a `--since` window was walked to completion —
+`fully_covered` is only true here), or `"no_window"` (no `--since` was given,
+so coverage is undefined and reported `false` rather than guessed). A count
+that lands exactly on `--limit` is reported as `"limit"` — the pessimistic
+reading, since the API can't say whether more messages existed.
 
 ## Usage
 
     DISCORD_BOT_TOKEN=... discord-bot-cli channel list 1234567890 --json
     DISCORD_BOT_TOKEN=... discord-bot-cli channel messages 1234567890 --limit 50 --json
+    DISCORD_BOT_TOKEN=... discord-bot-cli channel messages 1234567890 --since 90d --json
 """
 
 _MESSAGE = """\
@@ -158,16 +175,34 @@ id so the output composes into the next verb.
 
 ## Verbs
 
-- `discord-bot-cli message post <channel_id> <content>` — post a message.
-- `discord-bot-cli message reply <channel_id> <message_id> <content>` — reply
-  (attaches a message_reference to the target).
+- `discord-bot-cli message post <channel_id> [content] [--file PATH]...` —
+  post a message, optionally with one or more local file attachments (up to
+  10, repeatable). `content` may be omitted only if at least one `--file` is
+  given — Discord allows a file-only message but never a fully empty one.
+- `discord-bot-cli message reply <channel_id> <message_id> [content] [--file PATH]...` —
+  reply (attaches a message_reference to the target), same content/`--file`
+  rule as `post`.
 - `discord-bot-cli message react <channel_id> <message_id> <emoji>` — add a
   reaction (unicode emoji, or `name:id` for a custom one).
 - `discord-bot-cli message overview` — describe this noun.
 
+## `--file` and attachments
+
+`--file` reads a **local path the process can open — unsandboxed, with no
+path allow-listing** — and uploads it to Discord (a third party); this CLI is
+driven by other agents over the mesh, so which paths reach `--file` is the
+operator's responsibility, not this CLI's. `--json` on `post`/`reply` adds an
+`attachments` list, one entry per file: `{"id", "filename", "url", "size"}`.
+That `url` is a **reference, not storage**. It is a signed CDN link carrying
+`?ex=` (expiry), `&is=` (issued) and `&hm=` (signature) parameters, measured
+at ~24h of validity — so it stops resolving on its own even while the message
+still exists — and it 404s outright once the message is deleted. Re-fetch the
+message for a fresh URL; never store one and expect it to keep working.
+
 ## Usage
 
     DISCORD_BOT_TOKEN=... discord-bot-cli message post 123 "hello" --json
+    DISCORD_BOT_TOKEN=... discord-bot-cli message post 123 --file ./report.png --json
     DISCORD_BOT_TOKEN=... discord-bot-cli message react 123 456 👍
 """
 
@@ -180,29 +215,55 @@ Create threads and post to them.
 
 - `discord-bot-cli thread create <channel_id> --name <name> [--message <id>]` —
   create a thread, anchored to a message or standalone (public). Returns the id.
-- `discord-bot-cli thread post <thread_id> <content>` — post into a thread.
+- `discord-bot-cli thread post <thread_id> [content] [--file PATH]...` — post
+  into a thread, optionally with one or more local file attachments (up to
+  10, repeatable); `content` may be omitted only if at least one `--file` is
+  given, same rule and payload as `message post`/`reply`.
 - `discord-bot-cli thread overview` — describe this noun.
+
+## `--file` and attachments
+
+Same seam as `message post`/`reply`: `--file` is an **unsandboxed local
+read** — any path the process can open is uploaded to Discord, with no path
+allow-listing, so the operator owns which paths reach the flag. `--json`
+adds an `attachments` list (`{"id", "filename", "url", "size"}` per file);
+that `url` is a **reference, not storage** — it 404s once the message is
+deleted.
 
 ## Usage
 
     DISCORD_BOT_TOKEN=... discord-bot-cli thread create 123 --name "triage" --json
     DISCORD_BOT_TOKEN=... discord-bot-cli thread post 789 "first post" --json
+    DISCORD_BOT_TOKEN=... discord-bot-cli thread post 789 --file ./log.txt --json
 """
 
 _USER = """\
 # discord-bot-cli user
 
-Look up a Discord user.
+Look up one or more Discord users.
 
 ## Verbs
 
-- `discord-bot-cli user get <user_id>` — fetch a user's public profile
-  (`id`, `username`, `global_name`, `bot`).
+- `discord-bot-cli user get <user_id> [<user_id> ...] [--ids-file <path>|-]` —
+  fetch public profile fields (`id`, `username`, `global_name`, `bot`) for a
+  batch of users, resolved sequentially in input order (positional ids first,
+  then `--ids-file` lines). A per-id lookup failure is recorded as an
+  `{"id", "error", "remediation"}` entry in the same position rather than
+  failing the whole batch — the process still exits 0.
 - `discord-bot-cli user overview` — describe this noun.
+
+## `--json` is always an array
+
+`user get --json` **always** emits a JSON array, even for a single id — this
+changed in **0.6.0**, a deliberate breaking change from the prior payload,
+which returned a single object for a single id. Callers written against the
+old single-object shape must update to index/iterate the array.
 
 ## Usage
 
     DISCORD_BOT_TOKEN=... discord-bot-cli user get 1234567890 --json
+    DISCORD_BOT_TOKEN=... discord-bot-cli user get 111 222 333 --json
+    DISCORD_BOT_TOKEN=... discord-bot-cli user get --ids-file ids.txt --json
 """
 
 

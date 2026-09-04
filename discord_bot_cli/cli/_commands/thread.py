@@ -5,7 +5,8 @@ Verbs:
 * ``thread create <channel_id> --name <name> [--message <message_id>]`` — create
   a thread, either anchored to an existing message or standalone (a public
   thread on the channel). Returns the new thread id.
-* ``thread post <thread_id> <content>`` — post a message into a thread.
+* ``thread post <thread_id> [<content>] [--file PATH ...]`` — post a message
+  into a thread, optionally with one or more local file attachments.
 * ``thread overview`` — describe this noun.
 
 All Discord I/O routes through :func:`discord_bot_cli.discord_client.run`.
@@ -16,12 +17,20 @@ from __future__ import annotations
 import argparse
 
 from discord_bot_cli import discord_client
+from discord_bot_cli.cli._commands._attachments import (
+    add_file_flag,
+    attachments_payload,
+    build_files,
+    close_files,
+    require_content_or_files,
+    upload_bytes,
+)
 from discord_bot_cli.cli._commands._discord_common import add_json, emit_noun_overview
 from discord_bot_cli.cli._output import emit_result
 
 _VERBS = [
     "thread create <channel_id> --name <name> [--message <id>] — create a thread",
-    "thread post <thread_id> <content> — post into a thread",
+    "thread post <thread_id> [<content>] [--file PATH ...] — post into a thread",
     "thread overview — describe this noun (this command)",
 ]
 
@@ -54,13 +63,25 @@ def cmd_thread_create(args: argparse.Namespace) -> int:
 
 def cmd_thread_post(args: argparse.Namespace) -> int:
     thread_id = discord_client.parse_id(args.thread_id, "thread_id")
+    require_content_or_files(args.content, args.file)
+    files = build_files(args.file)
+    sent_bytes = upload_bytes(args.file)
 
     async def action(client: object) -> dict[str, object]:
         thread = await client.fetch_channel(thread_id)
-        message = await thread.send(args.content)
-        return {"id": str(message.id), "thread_id": str(thread_id)}
+        message = await thread.send(args.content, files=files or None)
+        return {
+            "id": str(message.id),
+            "thread_id": str(thread_id),
+            "attachments": attachments_payload(message),
+        }
 
-    result = discord_client.run(action)
+    try:
+        result = discord_client.run(action, upload_bytes=sent_bytes)
+    finally:
+        # discord.File opens eagerly, so a failure between build_files()
+        # and Discord consuming them would leak descriptors.
+        close_files(files)
     _emit(
         result,
         f"posted message {result['id']} to thread {thread_id}",
@@ -100,7 +121,7 @@ def register(sub: argparse._SubParsersAction) -> None:
 
     pp = noun_sub.add_parser("post", help="Post a message into a thread.")
     pp.add_argument("thread_id", help="Numeric thread id.")
-    pp.add_argument("content", help="Message text.")
+    add_file_flag(pp)
     add_json(pp)
     pp.set_defaults(func=cmd_thread_post)
 

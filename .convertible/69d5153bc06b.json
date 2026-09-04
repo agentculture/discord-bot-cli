@@ -1,0 +1,32 @@
+{
+  "task_id": "69d5153bc06b",
+  "status": "ok",
+  "summary": "\n\nHey! 👋 How can I help you today?",
+  "changed_files": [],
+  "steps": [],
+  "usage": {
+    "prompt_tokens": 1663,
+    "completion_tokens": 40,
+    "total_tokens": 1703
+  },
+  "stats": {
+    "request": "hi",
+    "started_at": "2026-05-31T17:15:22.166032+00:00",
+    "duration_seconds": 2.590947,
+    "model_turns": 1,
+    "step_count": 0,
+    "tool_counts": {},
+    "files_changed": 0,
+    "bytes_written": 0,
+    "reasoning_chars": 103,
+    "reasoning_bytes": 103,
+    "answer_chars": 34,
+    "answer_bytes": 37
+  },
+  "artifacts_path": ".convertible/69d5153bc06b.json",
+  "error": null,
+  "branch": null,
+  "pr_url": null,
+  "hook_firings": [],
+  "command": null
+}

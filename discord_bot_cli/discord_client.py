@@ -88,22 +88,41 @@ def parse_id(value: str, label: str) -> int:
         ) from exc
 
 
-def run[T](action: Callable[["discord.Client"], Awaitable[T]]) -> T:
+def _format_bytes(size: int) -> str:
+    """Human-readable byte size for an error message (1 MB = 1024 KB)."""
+    value = float(size)
+    for unit in ("B", "KB", "MB", "GB"):
+        if value < 1024 or unit == "GB":
+            return f"{value:.0f} {unit}" if unit == "B" else f"{value:.2f} {unit}"
+        value /= 1024
+    return f"{size} B"  # pragma: no cover - unreachable, GB returns above
+
+
+def run[T](
+    action: Callable[["discord.Client"], Awaitable[T]],
+    *,
+    upload_bytes: int | None = None,
+) -> T:
     """Run a one-shot Discord action: login, await ``action(client)``, close.
 
     ``action`` is an async callable that receives a logged-in ``discord.Client``
     and returns a JSON-serialisable result. The client is always closed, so no
     connection survives the call (the one-shot, no-daemon contract).
+
+    ``upload_bytes`` is the total size the caller is about to send, when it is
+    sending attachments. It is used for **one** purpose: naming the amount in
+    the 413 error. It never gates the request — see the 413 branch below.
     """
     token = require_token()
     discord = require_discord()
-    return asyncio.run(_run_async(discord, token, action))
+    return asyncio.run(_run_async(discord, token, action, upload_bytes))
 
 
 async def _run_async[T](
     discord: Any,
     token: str,
     action: Callable[["discord.Client"], Awaitable[T]],
+    upload_bytes: int | None = None,
 ) -> T:
     # Intents are a gateway concern; REST verbs need none. Intents.none() keeps
     # the client minimal and dodges privileged-intent errors.
@@ -132,6 +151,28 @@ async def _run_async[T](
             remediation="check the id is correct and visible to the bot",
         ) from exc
     except discord.HTTPException as exc:
+        if getattr(exc, "status", None) == 413:
+            # There is deliberately no attachment-size pre-flight anywhere in
+            # this CLI: only Discord knows a guild's real per-file cap, and it
+            # depends on the guild's boost tier, so hard-coding a limit here
+            # would wrongly reject valid uploads on a boosted guild. The 413
+            # response is therefore the entire size story available at this
+            # seam — discord.py's HTTPException carries no record of the byte
+            # size that was actually sent (verified against discord.py 2.7.1:
+            # it only reads the response status and body), so we surface
+            # Discord's own status text. The caller may additionally pass
+            # ``upload_bytes`` (read from the files it already validated, never
+            # gated on), in which case we can also say how much was sent. When
+            # it is absent we still never invent a number.
+            sent = f" (sent {_format_bytes(upload_bytes)})" if upload_bytes is not None else ""
+            raise CliError(
+                code=EXIT_USER_ERROR,
+                message=f"Discord rejected the upload as too large (413){sent}: {_http_text(exc)}",
+                remediation=(
+                    "the per-file size limit depends on this guild's boost tier, not a "
+                    "fixed size — resend a smaller file, or split/compress it"
+                ),
+            ) from exc
         raise CliError(
             code=EXIT_USER_ERROR,
             message=f"Discord API error ({getattr(exc, 'status', '?')}): {_http_text(exc)}",

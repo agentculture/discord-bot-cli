@@ -22,7 +22,8 @@ ignores:
   - ".local/**"
   - ".afi/**"
   - ".teken/**"
-  # Vendored skills are cited verbatim from guildmaster — do not reformat them.
+  # Vendored skills are cited verbatim from their upstream (guildmaster, or
+  # devague for the eight-leg operator skills) — do not reformat them.
   - ".claude/skills/**"
   # devague-generated specs/plans/frames carry literal <text>/<id>/<name>
   # placeholders (MD033) from frame text — they're artifacts, not authored prose.

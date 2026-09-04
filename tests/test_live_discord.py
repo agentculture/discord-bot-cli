@@ -16,18 +16,26 @@ Each individual test additionally skips unless the id it needs is provided:
   (``channel messages`` + the whole write chain). The write tests POST real
   messages here, so point it at a throwaway/sandbox channel.
 * ``DISCORD_TEST_USER_ID``    — any user id (``user get``); the bot's own id works.
+* ``DISCORD_TEST_PAGING_SINCE`` — a ``--since`` window (e.g. ``365d`` or an ISO
+  date) that is known to cover **more than 100** messages in
+  ``DISCORD_TEST_CHANNEL_ID``. Only needed for the paging-coverage test below;
+  everything else runs without it.
 
 Run them locally with::
 
     DISCORD_LIVE_TESTS=1 \\
     DISCORD_TEST_GUILD_ID=...  DISCORD_TEST_CHANNEL_ID=...  DISCORD_TEST_USER_ID=... \\
+    DISCORD_TEST_PAGING_SINCE=365d \\
     uv run pytest -m live -v
 
 The default suite deselects them implicitly (they self-skip) and CI runs them
 from a dedicated ``live-tests`` workflow that injects the token as a secret.
 
-There is no ``delete`` verb yet, so the write chain leaves its test messages in
-the channel — another reason the channel should be a sandbox.
+**These tests leave permanent artifacts.** There is no ``delete`` verb, so
+every message, reply, reaction, thread, and file attachment created here stays
+in the target channel forever as far as this tool is concerned. Point
+``DISCORD_TEST_CHANNEL_ID`` at a disposable sandbox channel only — never a
+real one.
 """
 
 from __future__ import annotations
@@ -63,9 +71,18 @@ pytestmark = [
     ),
 ]
 
+_PAGING_SINCE = _env("DISCORD_TEST_PAGING_SINCE")
+
 _needs_guild = pytest.mark.skipif(not _GUILD, reason="set DISCORD_TEST_GUILD_ID")
 _needs_channel = pytest.mark.skipif(not _CHANNEL, reason="set DISCORD_TEST_CHANNEL_ID")
 _needs_user = pytest.mark.skipif(not _USER, reason="set DISCORD_TEST_USER_ID")
+_needs_paging_window = pytest.mark.skipif(
+    not _PAGING_SINCE,
+    reason=(
+        "set DISCORD_TEST_PAGING_SINCE to a --since window (e.g. '365d') known to "
+        "cover more than 100 messages in DISCORD_TEST_CHANNEL_ID"
+    ),
+)
 
 
 def _run(args: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict]:
@@ -85,8 +102,11 @@ def _run(args: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict
 def test_live_user_get(capsys: pytest.CaptureFixture[str]) -> None:
     rc, payload = _run(["user", "get", _USER], capsys)
     assert rc == 0, payload
-    assert payload["id"] == _USER
-    assert "username" in payload
+    # 0.6.0: --json is ALWAYS an array, even for a single id.
+    assert isinstance(payload, list), payload
+    assert len(payload) == 1, payload
+    assert payload[0]["id"] == _USER
+    assert "username" in payload[0]
 
 
 @_needs_guild
@@ -94,7 +114,8 @@ def test_live_channel_list(capsys: pytest.CaptureFixture[str]) -> None:
     rc, payload = _run(["channel", "list", _GUILD], capsys)
     assert rc == 0, payload
     assert payload["guild_id"] == _GUILD
-    assert isinstance(payload["channels"], list) and payload["channels"]
+    assert isinstance(payload["channels"], list)
+    assert payload["channels"]
     for ch in payload["channels"]:
         assert {"id", "name", "type"} <= ch.keys()
 
@@ -119,7 +140,8 @@ def test_live_write_chain(capsys: pytest.CaptureFixture[str]) -> None:
         capsys,
     )
     assert rc == 0, posted
-    assert posted["id"] and posted["channel_id"] == _CHANNEL
+    assert posted["id"]
+    assert posted["channel_id"] == _CHANNEL
 
     rc, reply = _run(
         ["message", "reply", _CHANNEL, posted["id"], f"live test {tag} — reply"], capsys
@@ -149,3 +171,91 @@ def test_live_unknown_guild_is_user_error(capsys: pytest.CaptureFixture[str]) ->
     rc, payload = _run(["channel", "list", "1"], capsys)
     assert rc == 1, payload
     assert payload.get("message")  # structured error body, not a stack trace
+
+
+@_needs_channel
+def test_live_message_post_with_file_upload(tmp_path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A real ``--file`` upload round-trips a real attachment id and URL.
+
+    The stub client used by the rest of the suite never echoes uploaded files
+    back into ``message.attachments`` — that only happens after a real HTTP
+    round trip to Discord, so this is the only test in the whole suite that
+    can prove ``--json`` really returns a usable attachment id and URL. Assert
+    the values are non-empty and well-formed, not merely that the keys exist.
+    """
+    tag = uuid.uuid4().hex[:8]
+    file_path = tmp_path / f"live-upload-{tag}.txt"
+    file_path.write_text(f"discord-bot-cli live upload test {tag}\n")
+
+    rc, posted = _run(
+        [
+            "message",
+            "post",
+            _CHANNEL,
+            f"discord-bot-cli live test {tag} — file upload. Safe to delete.",
+            "--file",
+            str(file_path),
+        ],
+        capsys,
+    )
+    assert rc == 0, posted
+    assert posted["id"]
+    assert posted["channel_id"] == _CHANNEL
+
+    attachments = posted["attachments"]
+    assert isinstance(attachments, list), posted
+    assert len(attachments) == 1, posted
+    attachment = attachments[0]
+
+    # The id is a real Discord snowflake: a non-empty run of digits.
+    assert attachment["id"], attachment
+    assert attachment["id"].isdigit(), attachment
+    # The URL is a real, fetchable CDN link, not a placeholder.
+    assert attachment["url"].startswith("https://"), attachment
+    assert file_path.name in attachment["url"], attachment
+    assert attachment["filename"] == file_path.name, attachment
+    assert isinstance(attachment["size"], int), attachment
+    assert attachment["size"] > 0, attachment
+
+
+@_needs_channel
+@_needs_paging_window
+def test_live_channel_messages_pages_past_100(capsys: pytest.CaptureFixture[str]) -> None:
+    """A windowed read pages past the 100-message-per-request cap.
+
+    The stubbed fake client cannot prove this: nothing in the stub seam
+    exercises discord.py's internal pagination, so full coverage of a window
+    with more than 100 messages can only be established against real Discord.
+
+    This test does NOT silently pass on a thin channel (r7): if
+    ``DISCORD_TEST_PAGING_SINCE`` does not actually cover more than 100
+    messages in ``DISCORD_TEST_CHANNEL_ID``, we fail loudly with a message
+    explaining the precondition was not met, rather than reporting a green
+    result that never really exercised paging.
+    """
+    rc, payload = _run(["channel", "messages", _CHANNEL, "--since", _PAGING_SINCE], capsys)
+    assert rc == 0, payload
+
+    window = payload["window"]
+    messages = payload["messages"]
+    assert isinstance(messages, list)
+    assert len(messages) == window["message_count"]
+
+    if window["message_count"] <= 100:
+        pytest.fail(
+            "DISCORD_TEST_PAGING_SINCE="
+            f"{_PAGING_SINCE!r} only covered {window['message_count']} message(s) in "
+            f"channel {_CHANNEL} — this precondition (>100 messages in the window) "
+            "was not met, so paging past the 100-message cap was never exercised. "
+            "Pick a wider window or a channel with more history; this is a failure, "
+            "not a skip, because a green result here must mean paging was proven."
+        )
+
+    # No --limit was passed, so the walk had no ceiling: the only way it can
+    # stop is by exhausting the window, which is exactly full coverage.
+    assert window["stopped_by"] == "window_end", window
+    assert window["fully_covered"] is True, window
+
+    # Messages come back oldest-first; the window truly holds more than one
+    # page's worth (100) of history, proving discord.py's internal paging ran.
+    assert messages[0]["created_at"] <= messages[-1]["created_at"]
